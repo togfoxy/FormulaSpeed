@@ -240,16 +240,27 @@ end
 
 function race.wheelmoved(x, y)
 
-	if y > 0 then
-		-- wheel moved up. Zoom in
-		ZOOMFACTOR = ZOOMFACTOR + 0.05
-	end
-	if y < 0 then
-		ZOOMFACTOR = ZOOMFACTOR - 0.05
-	end
-	-- if ZOOMFACTOR < 0.8 then ZOOMFACTOR = 0.8 end
-	if ZOOMFACTOR > 3 then ZOOMFACTOR = 3 end
-	print("Zoom factor = " .. ZOOMFACTOR)
+    if not EDIT_MODE or (EDIT_MODE and selectedcell == nil) then
+    	if y > 0 then
+    		-- wheel moved up. Zoom in
+    		ZOOMFACTOR = ZOOMFACTOR + 0.05
+    	end
+    	if y < 0 then
+    		ZOOMFACTOR = ZOOMFACTOR - 0.05
+    	end
+    	-- if ZOOMFACTOR < 0.8 then ZOOMFACTOR = 0.8 end
+    	if ZOOMFACTOR > 3 then ZOOMFACTOR = 3 end
+    	print("Zoom factor = " .. ZOOMFACTOR)
+    else
+        -- in edit mode with a selected cell. Rotate it
+        if y < 0 then -- mouse wheel down
+            racetrack[selectedcell].rotation = racetrack[selectedcell].rotation + 0.1
+        else
+            racetrack[selectedcell].rotation = racetrack[selectedcell].rotation - 0.1
+        end
+        if racetrack[selectedcell].rotation < 0 then racetrack[selectedcell].rotation = (2 * math.pi) end
+        if racetrack[selectedcell].rotation > (2 * math.pi) then racetrack[selectedcell].rotation = 0 end
+    end
 end
 
 function race.mousemoved( x, y, dx, dy, istouch)
@@ -275,9 +286,12 @@ function race.draw()
     -- draw the track
     for k, v in pairs(racetrack) do
         if v.x ~= nil then
-            -- dray the dots
+            -- draw the dots
             love.graphics.setColor(1, 0, 1, 1)
             love.graphics.circle("fill", v.x, v.y, 5)
+            -- draw the heading of the dot
+            local x2, y2 = cf.addVectorToPoint(v.x, v.y, math.deg(v.rotation) + 90, 10)
+            love.graphics.line(v.x, v.y, x2, y2)
 
             -- draw the cell number
             love.graphics.print(k, v.x + 6, v.y - 6)
