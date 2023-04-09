@@ -17,17 +17,49 @@ local EDIT_MODE = false                -- true/false
 local selectedcell = nil                -- used during edit
 local previouscell = nil
 
+local function unselectAllCells()
+    -- uses a modular value to clear the current cell
+    if selectedcell ~= nil then
+        if racetrack[selectedcell] ~= nil then
+            racetrack[selectedcell].isSelected = false
+        end
+    end
+    selectedcell = nil
+end
+
+local function addNewCell(x, y, previouscell)
+    -- adds a new cell at the provided x/y
+    -- includes a link from previouscell to this cell if not nil
+
+    local thisCell = {}
+    thisCell.x = x
+    thisCell.y = y
+    thisCell.rotation = 0
+    thisCell.isSelected = true
+    thisCell.isCorner = false
+    thisCell.speedCheck = nil               -- used at the exit of corners to check for overshoot
+    thisCell.link = {}
+    table.insert(racetrack, thisCell)
+
+    if previouscell ~= nil then
+        -- link from previous cell to this cell
+        racetrack[previouscell].link[#racetrack] = true
+    end
+
+    unselectAllCells()
+    selectedcell = #racetrack
+    previouscell = selectedcell
+end
+
 local function loadRaceTrack()
     -- loads the hardcoded track into the racetrack variable
-
-    racetrack = {}
-    racetrack[1] = {}
-    racetrack[1].x = 100
-    racetrack[1].y = 100
-    racetrack[1].rotation = 0       -- radians
-    racetrack[1].link = {}
-    -- racetrack[1].link[1] = 2
-    -- racetrack[1].link[2] = 4
+    racetrack = fileops.loadRaceTrack()
+    print(inspect(racetrack))
+    if racetrack == nil then
+        racetrack = {}                  -- the load operation returned nil. Set back to empty table
+        addNewCell(100,100, nil)
+        print("No track found. Providing starting cell.")
+    end
 end
 
 local function loadCars()
@@ -66,40 +98,6 @@ local function loadGearStick()
     gearstick[6] = {}
     gearstick[6].x = gearstick[5].x
     gearstick[6].y = gearstick[4].y
-end
-
-local function unselectAllCells()
-    -- uses a modular value to clear the current cell
-    if selectedcell ~= nil then
-        if racetrack[selectedcell] ~= nil then
-            racetrack[selectedcell].isSelected = false
-        end
-    end
-    selectedcell = nil
-end
-
-local function addNewCell(x, y, previouscell)
-    -- adds a new cell at the provided x/y
-    -- includes a link from previouscell to this cell if not nil
-
-    local thisCell = {}
-    thisCell.x = x
-    thisCell.y = y
-    thisCell.rotation = 0
-    thisCell.isSelected = true
-    thisCell.isCorner = false
-    thisCell.speedCheck = nil               -- used at the exit of corners to check for overshoot
-    thisCell.link = {}
-    table.insert(racetrack, thisCell)
-
-    if previouscell ~= nil then
-        -- link from previous cell to this cell
-        racetrack[previouscell].link[#racetrack] = true
-    end
-
-    unselectAllCells()
-    selectedcell = #racetrack
-    previouscell = selectedcell
 end
 
 local function getSelectedCell()
