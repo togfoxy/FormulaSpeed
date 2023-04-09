@@ -62,7 +62,14 @@ function love.wheelmoved(x, y)
 	end
 end
 
-function love.mousemoved( x, y, dx, dy, istouch )
+function love.mousepressed(x, y, button, istouch)
+	local currentscene = cf.currentScreenName(SCREEN_STACK)
+	if currentscene == enum.sceneRace then
+		race.mousepressed(x, y, button, istouch)
+	end
+end
+
+function love.mousemoved(x, y, dx, dy, istouch )
 	local currentscene = cf.currentScreenName(SCREEN_STACK)
 	if currentscene == enum.sceneRace then
 		race.mousemoved(x, y)
