@@ -235,13 +235,13 @@ end
 
 function race.mousereleased(rx, ry, x, y, button)
 
-    local mousex, mousey = cam:toWorld(x, y)	-- converts screen x/y to world x/y
+    local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
 
     -- determine which cell is closest to the mouse click
     local smallestdist = 999999
     local smallestkey = nil
     for k, v in pairs(racetrack) do
-        local dist = cf.getDistance(mousex, mousey, v.x, v.y)
+        local dist = cf.getDistance(camx, camy, v.x, v.y)
         if dist > 0 and dist < smallestdist then
             smallestdist = dist
             smallestkey = k
@@ -265,7 +265,7 @@ function race.mousereleased(rx, ry, x, y, button)
             local smallestdist = 999999
             local smallestkey = nil
             for k, v in pairs(gearstick) do
-                local dist = cf.getDistance(mousex, mousey, v.x, v.y)
+                local dist = cf.getDistance(rx, ry, v.x, v.y)
                 if dist > 0 and dist < smallestdist then
                     smallestdist = dist
                     smallestkey = k
