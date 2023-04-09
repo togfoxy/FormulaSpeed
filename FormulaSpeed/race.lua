@@ -34,7 +34,7 @@ local function addNewCell(x, y, previouscell)
     thisCell.rotation = 0
     thisCell.isSelected = true
     thisCell.isCorner = false
-    thisCell.speedCheck = nil               -- used at the exit of corners to check for overshoot
+    thisCell.speedCheck = nil               -- Number. Used at the exit of corners to check for overshoot
     thisCell.link = {}
     table.insert(racetrack, thisCell)
 
@@ -76,6 +76,12 @@ local function loadCars()
 
     cars[1].cell = 1
     cars[1].gear = 0
+    cars[1].wptyres = 6
+    cars[1].wpbrakes = 3
+    cars[1].wpgearbox = 3
+    cars[1].wpbody = 3
+    cars[1].wpengine = 3
+    cars[1].wphandling = 2
     cars[1].movesleft = 0
     cars[1].brakestaken = 0             -- how many times did car stop in current corner
 end
@@ -201,90 +207,79 @@ function race.mousereleased(rx, ry, x, y, button)
 
     local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
 
-    -- -- select closest cell, regardless of mode or button
-    -- unselectAllCells()
-    -- local cell = getClosestCell(camx, camy)
-    -- if cell ~= nil then
-    --     racetrack[cell].isSelected = true
-    -- end
-
     if EDIT_MODE == false then
         if button == 1 then
+            -- see if a gear is selected
+            if cars[1].movesleft == 0 then
+                local smallestdist = 999999
+                local smallestkey = nil
+                for k, v in pairs(gearstick) do
+                    local dist = cf.getDistance(rx, ry, v.x, v.y)
+                    if dist > 0 and dist < smallestdist then
+                        smallestdist = dist
+                        smallestkey = k
+                    end
+                end
+                if smallestdist <= 30 then
+                    if math.abs(smallestkey - cars[1].gear) <= 1 then
+                        cars[1].gear = smallestkey
+                        cars[1].movesleft = cars[1].gear
+                        GAME_MODE = enum.gamemodeMoveCar
+                    end
+                end
+            end
+        end
+        if button == 2 then
+            -- try to move the car to the selected cell if linked
+            if cars[1].movesleft > 0 then
+                local currentcell = cars[1].cell
+                local desiredcell = getSelectedCell()
 
+                if desiredcell ~= nil then
+                    if racetrack[currentcell].link[desiredcell] == true then
+                        -- move is legal
+                        cars[1].cell = desiredcell
+                        cars[1].movesleft = cars[1].movesleft - 1
+
+                        -- if ending turn in corner then give credit for the braking
+                        if cars[1].movesleft < 1 then
+                            cars[1].movesleft = 0
+                            cars[1].brakestaken = cars[1].brakestaken + 1
+                        end
+
+                        -- if leaving corner, see if correct number of stops made
+                        if racetrack[cars[1].cell].speedCheck ~= nil then
+                            local brakescore = racetrack[cars[1].cell].speedCheck - cars[1].brakestaken
+                            if brakescore <= 0 then
+                                -- correct brakes taken. No problems
+                            else
+                                -- overshoot
+                                if brakescore >= 2 then
+                                    -- elimination
+                                    print("Crashed out")
+                                else
+                                    cars[1].wptyres = cars[1].wptyres - 1
+                                end
+                            end
+                        end
+                    end
+                else
+                end
+            end
         end
     else
         -- edit mode = true
+        if button == 2 then
+            local cell1 = getSelectedCell()
+            local cell2 = getClosestCell(camx, camy)
 
-    --     if button == 1 then
-    --         -- see if a gear is selected
-    --         if cars[1].movesleft == 0 then
-    --             local smallestdist = 999999
-    --             local smallestkey = nil
-    --             for k, v in pairs(gearstick) do
-    --                 local dist = cf.getDistance(rx, ry, v.x, v.y)
-    --                 if dist > 0 and dist < smallestdist then
-    --                     smallestdist = dist
-    --                     smallestkey = k
-    --                 end
-    --             end
-    --             if smallestdist <= 30 then
-    --                 if math.abs(smallestkey - cars[1].gear) <= 1 then
-    --                     cars[1].gear = smallestkey
-    --                     cars[1].movesleft = cars[1].gear
-    --                     GAME_MODE = enum.gamemodeMoveCar
-    --                 end
-    --             end
-    --         end
-    --     end
-    --
-    --     if button == 2 then
-    --         -- try to move the car to the selected cell
-    --
-    --         if cars[1].movesleft > 0 then
-    --             local currentcell = cars[1].cell
-    --             local desiredcell = getSelectedCell()
-    --
-    --             for k, v in pairs(racetrack[currentcell].link) do
-    --                 if v == desiredcell then
-    --                     -- link established. Move car
-    --                     cars[1].cell = desiredcell
-    --                     cars[1].movesleft = cars[1].movesleft - 1
-    --
-    --                     -- if leaving corner, see if correct number of stops made
-    --                     if racetrack[cars[1].cell].brakecheck == nil then
-    --                         -- do nothing
-    --                     else
-    --                         if racetrack[cars[1].cell].brakecheck > 0 then
-    --                             if cars[1].brakestaken >= racetrack[cars[1].cell].brakecheck then
-    --                                 -- all good. Do nothing
-    --                                 cars[1].brakestaken = 0         -- reset for next corner
-    --                             else
-    --                                 print("Crash!")
-    --                             end
-    --                         end
-    --                     end
-    --                 end
-    --             end
-    --         end
-    --         if cars[1].movesleft == 0 then
-    --             if racetrack[cars[1].cell].isBrakeZone then
-    --                 cars[1].brakestaken = cars[1].brakestaken + 1
-    --             end
-    --         end
-    --
-    --         mousepresseddrawx = nil
-    --         mousepresseddrawy = nil
-    --     end
-    -- else    -- edit mode
-    --     if button == 2 then
-    --         local cell1 = getClosestCell(mousepressedclickx, mousepressedclicky)
-    --         local cell2 = getClosestCell(camx, camy)
-    --
-    --         if cell1 ~= nil and cell2 ~= nil then
-    --             -- link these two cells
-    --             racetrack[cell1].link[cell2] = true
-    --         end
-    --     end
+            print(cell1, cell2)
+
+            if cell1 ~= nil and cell2 ~= nil then
+                -- link cell1 to cell2
+                racetrack[cell1].link[cell2] = true
+            end
+        end
     end
 end
 

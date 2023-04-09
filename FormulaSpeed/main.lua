@@ -1,3 +1,5 @@
+-- rules: https://www.ultraboardgames.com/formula-d/game-rules.php
+
 inspect = require 'lib.inspect'
 -- https://github.com/kikito/inspect.lua
 
