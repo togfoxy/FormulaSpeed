@@ -20,14 +20,17 @@ local function loadRaceTrack()
     -- loads the hardcoded track into the racetrack variable
 
     -- initialise table
-    for i = 1, numofcells do
-        racetrack[i] = {}
-        racetrack[i].link = {}
-    end
+    -- for i = 1, numofcells do
+    --     racetrack[i] = {}
+    --     racetrack[i].link = {}
+    -- end
 
+    racetrack = {}
+    racetrack[1] = {}
     racetrack[1].x = 100
     racetrack[1].y = 100
     racetrack[1].rotation = 0       -- radians
+    racetrack[1].link = {}
     -- racetrack[1].link[1] = 2
     -- racetrack[1].link[2] = 4
 end
@@ -68,6 +71,15 @@ local function loadGearStick()
     gearstick[6] = {}
     gearstick[6].x = gearstick[5].x
     gearstick[6].y = gearstick[4].y
+end
+
+local function addNewCell(x, y)
+    local thisCell = {}
+    thisCell.x = x
+    thisCell.y = y
+    thisCell.rotation = 0
+    thisCell.link = {}
+    table.insert(racetrack, thisCell)
 end
 
 local function getSelectedCell()
@@ -119,90 +131,103 @@ function race.keyreleased(key, scancode)
         EDIT_MODE = not EDIT_MODE
     end
 
+    if EDIT_MODE then
+        if key == "c" then  -- add new cell
+            local x, y = love.mouse.getPosition()
+            local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
+            addNewCell(camx, camy)
+        end
+    end
+
 end
 
 function race.mousereleased(rx, ry, x, y, button)
 
-    local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
+    if not EDIT_MODE
+        local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
 
-    -- determine which cell is closest to the mouse click
-    local smallestdist = 999999
-    local smallestkey = nil
-    for k, v in pairs(racetrack) do
-        local dist = cf.getDistance(camx, camy, v.x, v.y)
-        if dist > 0 and dist < smallestdist then
-            smallestdist = dist
-            smallestkey = k
-        end
-    end
-    if smallestdist <= 15 then
-        if racetrack[smallestkey].isSelected then
-            racetrack[smallestkey].isSelected = false
-        else
-            -- unselect every cell
-            for i = 1, numofcells do
-                racetrack[i].isSelected = false
+        -- determine which cell is closest to the mouse click
+        local smallestdist = 999999
+        local smallestkey = nil
+        for k, v in pairs(racetrack) do
+            local dist = cf.getDistance(camx, camy, v.x, v.y)
+            if dist > 0 and dist < smallestdist then
+                smallestdist = dist
+                smallestkey = k
             end
-            racetrack[smallestkey].isSelected = true
         end
-    end
+        if smallestdist <= 15 then
+            if racetrack[smallestkey].isSelected then
+                racetrack[smallestkey].isSelected = false
+            else
+                -- unselect every cell
+                for i = 1, numofcells do
+                    racetrack[i].isSelected = false
+                end
+                racetrack[smallestkey].isSelected = true
+            end
+        end
 
-    if button == 1 then
-        -- see if a gear is selected
-        if cars[1].movesleft == 0 then
-            local smallestdist = 999999
-            local smallestkey = nil
-            for k, v in pairs(gearstick) do
-                local dist = cf.getDistance(rx, ry, v.x, v.y)
-                if dist > 0 and dist < smallestdist then
-                    smallestdist = dist
-                    smallestkey = k
+        if button == 1 then
+            -- see if a gear is selected
+            if cars[1].movesleft == 0 then
+                local smallestdist = 999999
+                local smallestkey = nil
+                for k, v in pairs(gearstick) do
+                    local dist = cf.getDistance(rx, ry, v.x, v.y)
+                    if dist > 0 and dist < smallestdist then
+                        smallestdist = dist
+                        smallestkey = k
+                    end
+                end
+                if smallestdist <= 30 then
+                    if math.abs(smallestkey - cars[1].gear) <= 1 then
+                        cars[1].gear = smallestkey
+                        cars[1].movesleft = cars[1].gear
+                        GAME_MODE = enum.gamemodeMoveCar
+                    end
                 end
             end
-            if smallestdist <= 30 then
-                if math.abs(smallestkey - cars[1].gear) <= 1 then
-                    cars[1].gear = smallestkey
-                    cars[1].movesleft = cars[1].gear
-                    GAME_MODE = enum.gamemodeMoveCar
-                end
-            end
         end
-    end
 
-    if button == 2 then
-        -- try to move the car to the selected cell
+        if button == 2 then
+            -- try to move the car to the selected cell
 
-        if cars[1].movesleft > 0 then
-            local currentcell = cars[1].cell
-            local desiredcell = getSelectedCell()
+            if cars[1].movesleft > 0 then
+                local currentcell = cars[1].cell
+                local desiredcell = getSelectedCell()
 
-            for k, v in pairs(racetrack[currentcell].link) do
-                if v == desiredcell then
-                    -- link established. Move car
-                    cars[1].cell = desiredcell
-                    cars[1].movesleft = cars[1].movesleft - 1
+                for k, v in pairs(racetrack[currentcell].link) do
+                    if v == desiredcell then
+                        -- link established. Move car
+                        cars[1].cell = desiredcell
+                        cars[1].movesleft = cars[1].movesleft - 1
 
-                    -- if leaving corner, see if correct number of stops made
-                    if racetrack[cars[1].cell].brakecheck == nil then
-                        -- do nothing
-                    else
-                        if racetrack[cars[1].cell].brakecheck > 0 then
-                            if cars[1].brakestaken >= racetrack[cars[1].cell].brakecheck then
-                                -- all good. Do nothing
-                                cars[1].brakestaken = 0         -- reset for next corner
-                            else
-                                print("Crash!")
+                        -- if leaving corner, see if correct number of stops made
+                        if racetrack[cars[1].cell].brakecheck == nil then
+                            -- do nothing
+                        else
+                            if racetrack[cars[1].cell].brakecheck > 0 then
+                                if cars[1].brakestaken >= racetrack[cars[1].cell].brakecheck then
+                                    -- all good. Do nothing
+                                    cars[1].brakestaken = 0         -- reset for next corner
+                                else
+                                    print("Crash!")
+                                end
                             end
                         end
                     end
                 end
             end
-        end
-        if cars[1].movesleft == 0 then
-            if racetrack[cars[1].cell].isBrakeZone then
-                cars[1].brakestaken = cars[1].brakestaken + 1
+            if cars[1].movesleft == 0 then
+                if racetrack[cars[1].cell].isBrakeZone then
+                    cars[1].brakestaken = cars[1].brakestaken + 1
+                end
             end
+
         end
+    else    -- edit mode
+
 
     end
 end
