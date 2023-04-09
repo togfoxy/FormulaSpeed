@@ -14,20 +14,58 @@ local gearstick = {}            -- made this a table so I can do graphics stuff
 local GAME_MODE
 
 local EDIT_MODE = false                -- true/false
-local selectedcell = nil                -- used during edit
-local previouscell = nil
+
+local previouscell = nil                -- previous cell placed during link command
+
+local function unselectAllCells()
+    for k, v in pairs(racetrack) do
+        v.isSelected = false
+    end
+end
+
+local function addNewCell(x, y, previouscell)
+    -- adds a new cell at the provided x/y
+    -- makes the new cell the selected cell
+    -- includes a link from previouscell to this cell if not nil
+
+    local thisCell = {}
+    thisCell.x = x
+    thisCell.y = y
+    thisCell.rotation = 0
+    thisCell.isSelected = true
+    thisCell.isCorner = false
+    thisCell.speedCheck = nil               -- Number. Used at the exit of corners to check for overshoot
+    thisCell.link = {}
+    table.insert(racetrack, thisCell)
+
+    if previouscell ~= nil then
+        -- link from previous cell to this cell
+        racetrack[previouscell].link[#racetrack] = true
+    end
+
+    unselectAllCells()
+    previouscell = #racetrack
+end
+
+local function getSelectedCell()
+    for k, v in pairs(racetrack) do
+        if v.isSelected then
+            return k
+        end
+    end
+    return nil
+end
 
 local function loadRaceTrack()
     -- loads the hardcoded track into the racetrack variable
-
-    racetrack = {}
-    racetrack[1] = {}
-    racetrack[1].x = 100
-    racetrack[1].y = 100
-    racetrack[1].rotation = 0       -- radians
-    racetrack[1].link = {}
-    -- racetrack[1].link[1] = 2
-    -- racetrack[1].link[2] = 4
+    racetrack = fileops.loadRaceTrack()
+    if racetrack == nil then
+        racetrack = {}                  -- the load operation returned nil. Set back to empty table
+        addNewCell(100,100, nil)
+        print("No track found. Providing starting cell.")
+    else
+        print("Track loaded")
+    end
 end
 
 local function loadCars()
@@ -38,6 +76,12 @@ local function loadCars()
 
     cars[1].cell = 1
     cars[1].gear = 0
+    cars[1].wptyres = 6
+    cars[1].wpbrakes = 3
+    cars[1].wpgearbox = 3
+    cars[1].wpbody = 3
+    cars[1].wpengine = 3
+    cars[1].wphandling = 2
     cars[1].movesleft = 0
     cars[1].brakestaken = 0             -- how many times did car stop in current corner
 end
@@ -68,45 +112,21 @@ local function loadGearStick()
     gearstick[6].y = gearstick[4].y
 end
 
-local function unselectAllCells()
-    -- uses a modular value to clear the current cell
-    if selectedcell ~= nil then
-        if racetrack[selectedcell] ~= nil then
-            racetrack[selectedcell].isSelected = false
-        end
-    end
-    selectedcell = nil
-end
-
-local function addNewCell(x, y, previouscell)
-    -- adds a new cell at the provided x/y
-    -- includes a link from previouscell to this cell if not nil
-
-    local thisCell = {}
-    thisCell.x = x
-    thisCell.y = y
-    thisCell.rotation = 0
-    thisCell.isSelected = true
-    thisCell.isCorner = false
-    thisCell.speedCheck = nil               -- used at the exit of corners to check for overshoot
-    thisCell.link = {}
-    table.insert(racetrack, thisCell)
-
-    if previouscell ~= nil then
-        -- link from previous cell to this cell
-        racetrack[previouscell].link[#racetrack] = true
-    end
-
-    unselectAllCells()
-    selectedcell = #racetrack
-    previouscell = selectedcell
-end
-
-local function getSelectedCell()
+local function getClosestCell(pointx, pointy)
+    -- returns cell number or nil
+    -- determine which cell is closest to the mouse click
+    local smallestdist = 999999
+    local smallestkey = nil
     for k, v in pairs(racetrack) do
-        if v.isSelected then
-            return k
+        local dist = cf.getDistance(pointx, pointy, v.x, v.y)
+        if dist > 0 and dist < smallestdist then
+            smallestdist = dist
+            smallestkey = k
         end
+    end
+
+    if smallestdist <= 15 then
+        return smallestkey
     end
     return nil
 end
@@ -128,8 +148,6 @@ function race.keypressed( key, scancode, isrepeat )
 	if rightpressed then TRANSLATEX = TRANSLATEX + translatefactor end
 	if uppressed then TRANSLATEY = TRANSLATEY - translatefactor end
 	if downpressed then TRANSLATEY = TRANSLATEY + translatefactor end
-
-    -- print(TRANSLATEX, TRANSLATEY)
 end
 
 function race.keyreleased(key, scancode)
@@ -155,7 +173,8 @@ function race.keyreleased(key, scancode)
     if EDIT_MODE then
         local x, y = love.mouse.getPosition()
         local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
-        if key == "c" then  -- add new cell
+
+        if key == "n" then  -- add new cell
             addNewCell(camx, camy)
         end
 
@@ -165,13 +184,20 @@ function race.keyreleased(key, scancode)
         end
 
         if key == "delete" then
-            if selectedcell ~= nil then
+            local cell = getSelectedCell()
+            if cell ~= nil then
                 -- delete cell
-                -- table.remove(racetrack, selectedcell)
-                racetrack[selectedcell] = nil
+                racetrack[cell] = nil
                 unselectAllCells()
                 previouscell = nil
-                selectedcell = nil
+            end
+        end
+
+        if key == "s" then          -- capital S
+            -- save the track
+            if love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") then
+                local success = fileops.saveRaceTrack(racetrack)
+                print(success)
             end
         end
     end
@@ -181,28 +207,7 @@ function race.mousereleased(rx, ry, x, y, button)
 
     local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
 
-    -- determine which cell is closest to the mouse click
-    local smallestdist = 999999
-    local smallestkey = nil
-    for k, v in pairs(racetrack) do
-        local dist = cf.getDistance(camx, camy, v.x, v.y)
-        if dist > 0 and dist < smallestdist then
-            smallestdist = dist
-            smallestkey = k
-        end
-    end
-
-    unselectAllCells()
-    if smallestdist <= 15 then
-        if racetrack[smallestkey].isSelected then
-            racetrack[smallestkey].isSelected = false
-        else
-            racetrack[smallestkey].isSelected = true
-            selectedcell = smallestkey
-        end
-    end
-
-    if not EDIT_MODE then
+    if EDIT_MODE == false then
         if button == 1 then
             -- see if a gear is selected
             if cars[1].movesleft == 0 then
@@ -224,43 +229,57 @@ function race.mousereleased(rx, ry, x, y, button)
                 end
             end
         end
-
         if button == 2 then
-            -- try to move the car to the selected cell
-
+            -- try to move the car to the selected cell if linked
             if cars[1].movesleft > 0 then
                 local currentcell = cars[1].cell
                 local desiredcell = getSelectedCell()
 
-                for k, v in pairs(racetrack[currentcell].link) do
-                    if v == desiredcell then
-                        -- link established. Move car
+                if desiredcell ~= nil then
+                    if racetrack[currentcell].link[desiredcell] == true then
+                        -- move is legal
                         cars[1].cell = desiredcell
                         cars[1].movesleft = cars[1].movesleft - 1
 
+                        -- if ending turn in corner then give credit for the braking
+                        if cars[1].movesleft < 1 then
+                            cars[1].movesleft = 0
+                            cars[1].brakestaken = cars[1].brakestaken + 1
+                        end
+
                         -- if leaving corner, see if correct number of stops made
-                        if racetrack[cars[1].cell].brakecheck == nil then
-                            -- do nothing
-                        else
-                            if racetrack[cars[1].cell].brakecheck > 0 then
-                                if cars[1].brakestaken >= racetrack[cars[1].cell].brakecheck then
-                                    -- all good. Do nothing
-                                    cars[1].brakestaken = 0         -- reset for next corner
+                        if racetrack[cars[1].cell].speedCheck ~= nil then
+                            local brakescore = racetrack[cars[1].cell].speedCheck - cars[1].brakestaken
+                            if brakescore <= 0 then
+                                -- correct brakes taken. No problems
+                            else
+                                -- overshoot
+                                if brakescore >= 2 then
+                                    -- elimination
+                                    print("Crashed out")
                                 else
-                                    print("Crash!")
+                                    cars[1].wptyres = cars[1].wptyres - 1
                                 end
                             end
                         end
                     end
-                end
-            end
-            if cars[1].movesleft == 0 then
-                if racetrack[cars[1].cell].isBrakeZone then
-                    cars[1].brakestaken = cars[1].brakestaken + 1
+                else
                 end
             end
         end
-    else    -- edit mode
+    else
+        -- edit mode = true
+        if button == 2 then
+            local cell1 = getSelectedCell()
+            local cell2 = getClosestCell(camx, camy)
+
+            print(cell1, cell2)
+
+            if cell1 ~= nil and cell2 ~= nil then
+                -- link cell1 to cell2
+                racetrack[cell1].link[cell2] = true
+            end
+        end
     end
 end
 
@@ -289,13 +308,23 @@ function race.wheelmoved(x, y)
     end
 end
 
-function race.mousemoved( x, y, dx, dy, istouch)
+function race.mousepressed(x, y, button, istouch)
+    local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
+    local cell = getClosestCell(camx, camy)
+    unselectAllCells()
+    if cell ~= nil then
+        racetrack[cell].isSelected = true
+    end
+end
+
+function race.mousemoved(x, y, dx, dy, istouch)
+    local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
     if EDIT_MODE then
         if love.mouse.isDown(1) then
-            if selectedcell ~= nil then
-                local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
-                racetrack[selectedcell].x = camx
-                racetrack[selectedcell].y = camy
+            local cell = getSelectedCell()
+            if cell ~= nil then
+                racetrack[cell].x = camx
+                racetrack[cell].y = camy
             end
         end
     end
@@ -360,10 +389,28 @@ function race.draw()
         love.graphics.setColor(1,1,1,1)
         love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
     end
+
+    -- draw any mouse line things
+    if EDIT_MODE then       -- note there is another EDIT_MODE after camera detach
+        if love.mouse.isDown(2) then
+            local cell = getSelectedCell()
+            if cell ~= nil then
+                -- button 2 is being dragged from the selected cell
+                local drawx1 = racetrack[cell].x
+                local drawy1 = racetrack[cell].y
+
+                local drawx2, drawy2 = love.mouse.getPosition()
+                drawx2, drawy2 = cam:toWorld(drawx2, drawy2)
+
+                love.graphics.setColor(1,1,1,1)
+                love.graphics.line(drawx1, drawy1, drawx2, drawy2)
+            end
+        end
+    end
+
     cam:detach()
 
     -- draw the sidebar
-
     local drawx = SCREEN_WIDTH - sidebarwidth
     love.graphics.setColor(1, 1, 1, 0.25)
     love.graphics.rectangle("fill", drawx, 0, sidebarwidth, SCREEN_HEIGHT)
@@ -396,7 +443,7 @@ function race.draw()
         love.graphics.circle("fill", v.x, v.y, 10)
     end
 
-    -- edit mode?
+    -- edit mode
     if EDIT_MODE then
         love.graphics.setColor(1,1,1,1)
         love.graphics.print("EDIT MODE", 50, 50)
@@ -417,137 +464,3 @@ function race.update(dt)
 end
 
 return race
-
--- local function loadRaceTrack()
---     -- loads the hardcoded track into the racetrack variable
---
---     -- initialise table
---     for i = 1, numofcells do
---         racetrack[i] = {}
---         racetrack[i].link = {}
---     end
---
---     racetrack[1].x = 100
---     racetrack[1].y = 100
---     racetrack[1].rotation = 0       -- radians
---     racetrack[1].link[1] = 2
---     racetrack[1].link[2] = 4
---
---     racetrack[2].x = racetrack[1].x + celllength / 4
---     racetrack[2].y = racetrack[1].y + cellwidth / 2
---     racetrack[2].rotation = 0       -- radians
---     racetrack[2].link[1] = 4
---     racetrack[2].link[2] = 5
---     racetrack[2].link[3] = 6
---
---     racetrack[3].x = racetrack[1].x
---     racetrack[3].y = racetrack[1].y + cellwidth
---     racetrack[3].rotation = 0       -- radians
---     racetrack[3].link[1] = 2
---     racetrack[3].link[2] = 6
---
---     racetrack[4].x = racetrack[1].x + celllength / 2
---     racetrack[4].y = racetrack[1].y
---     racetrack[4].rotation = 0       -- radians
---     racetrack[4].link[1] = 5
---     racetrack[4].link[2] = 7
---
---     racetrack[5].x = racetrack[2].x + celllength / 2
---     racetrack[5].y = racetrack[2].y
---     racetrack[5].rotation = 0       -- radians
---     racetrack[5].link[1] = 7
---     racetrack[5].link[2] = 8
---     racetrack[5].link[3] = 9
---
---     racetrack[6].x = racetrack[3].x + celllength / 2
---     racetrack[6].y = racetrack[3].y
---     racetrack[6].rotation = 0       -- radians
---     racetrack[6].link[1] = 5
---     racetrack[6].link[2] = 9
---
---     racetrack[7].x = racetrack[4].x + celllength / 2
---     racetrack[7].y = racetrack[4].y
---     racetrack[7].rotation = 0       -- radians
---     racetrack[7].link[1] = 8
---     racetrack[7].link[2] = 10
---
---     racetrack[8].x = racetrack[5].x + celllength / 2
---     racetrack[8].y = racetrack[5].y
---     racetrack[8].rotation = 0       -- radians
---     racetrack[8].link[1] = 11
---
---     racetrack[9].x = racetrack[6].x + celllength / 2
---     racetrack[9].y = racetrack[6].y
---     racetrack[9].rotation = 0       -- radians
---     racetrack[9].link[1] = 8
---     racetrack[9].link[2] = 12
---
---     racetrack[10].x = racetrack[7].x + celllength / 2
---     racetrack[10].y = racetrack[7].y
---     racetrack[10].rotation = 0       -- radians
---     racetrack[10].link[1] = 13
---     -- racetrack[11].link[1] = 17
---
---     racetrack[11].x = racetrack[8].x + celllength / 2
---     racetrack[11].y = racetrack[8].y + cellwidth / 2
---     racetrack[11].rotation = 0.7853       -- radians
---     racetrack[11].isBrakeZone = true
---     racetrack[11].link[1] = 15
---     racetrack[11].link[2] = 14
---
---     racetrack[12].x = racetrack[9].x + celllength / 2
---     racetrack[12].y = racetrack[9].y + cellwidth / 2 - 5
---     racetrack[12].rotation = 0.7853       -- radians
---     racetrack[12].isBrakeZone = true
---     racetrack[12].link[1] = 14
---
---     racetrack[13].x = racetrack[10].x + celllength / 2
---     racetrack[13].y = racetrack[10].y + cellwidth / 2 - 5
---     racetrack[13].rotation = 0.7853       -- radians
---     racetrack[13].isBrakeZone = true
---     racetrack[13].link[1] = 17
---
---     racetrack[14].x = racetrack[12].x + 25
---     racetrack[14].y = racetrack[12].y + cellwidth
---     racetrack[14].rotation = 1.5706       -- radians
---     racetrack[14].brakecheck = 1
---     racetrack[14].link[1] = 16
---     racetrack[14].link[2] = 20
---
---     racetrack[15].x = racetrack[11].x + 30
---     racetrack[15].y = racetrack[11].y + cellwidth
---     racetrack[15].rotation = 1.1       -- radians
---     racetrack[15].isBrakeZone = true
---     racetrack[15].link[1] = 16
---
---     racetrack[16].x = racetrack[15].x - 5
---     racetrack[16].y = racetrack[14].y + celllength / 4
---     racetrack[16].rotation = 1.5706       -- radians
---     racetrack[16].brakecheck = 1
---     racetrack[16].link[1] = 19
---     racetrack[16].link[2] = 20
---
---     racetrack[17].x = racetrack[13].x + 37
---     racetrack[17].y = racetrack[13].y + 58
---     racetrack[17].rotation = 1.2        -- radians
---     racetrack[17].isBrakeZone = true
---     racetrack[17].link[1] = 15
---     racetrack[17].link[2] = 18
---
---     racetrack[18].x = racetrack[17].x + 10
---     racetrack[18].y = racetrack[14].y
---     racetrack[18].rotation = 1.5706        -- radians
---     racetrack[18].isBrakeZone = true
---     racetrack[18].link[1] = 19
---     racetrack[18].link[2] = 16
---
---     racetrack[19].x = racetrack[18].x - 10
---     racetrack[19].y = racetrack[18].y + celllength / 2
---     racetrack[19].rotation = 1.5706        -- radians
---     racetrack[19].brakecheck = 1
---
---     racetrack[20].x = racetrack[14].x
---     racetrack[20].y = racetrack[14].y + celllength / 2
---     racetrack[20].rotation = 1.5706        -- radians
---
--- end

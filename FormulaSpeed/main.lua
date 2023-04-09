@@ -1,3 +1,5 @@
+-- rules: https://www.ultraboardgames.com/formula-d/game-rules.php
+
 inspect = require 'lib.inspect'
 -- https://github.com/kikito/inspect.lua
 
@@ -9,10 +11,17 @@ cf = require 'lib.commonfunctions'
 Camera = require 'lib.cam11.cam11'
 -- https://notabug.org/pgimeno/cam11
 
+bitser = require 'lib.bitser'
+-- https://github.com/gvx/bitser
+
+nativefs = require 'lib.nativefs'
+-- https://github.com/megagrump/nativefs
+
 require 'lib.buttons'
 require 'enums'
 require 'constants'
 fun = require 'functions'
+require 'fileops'
 
 require 'race'
 
@@ -55,7 +64,14 @@ function love.wheelmoved(x, y)
 	end
 end
 
-function love.mousemoved( x, y, dx, dy, istouch )
+function love.mousepressed(x, y, button, istouch)
+	local currentscene = cf.currentScreenName(SCREEN_STACK)
+	if currentscene == enum.sceneRace then
+		race.mousepressed(x, y, button, istouch)
+	end
+end
+
+function love.mousemoved(x, y, dx, dy, istouch )
 	local currentscene = cf.currentScreenName(SCREEN_STACK)
 	if currentscene == enum.sceneRace then
 		race.mousemoved(x, y)
