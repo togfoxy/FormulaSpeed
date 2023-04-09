@@ -14,6 +14,8 @@ local gearstick = {}            -- made this a table so I can do graphics stuff
 
 local GAME_MODE
 
+local EDIT_MODE = false                -- true/false
+
 local function loadRaceTrack()
     -- loads the hardcoded track into the racetrack variable
 
@@ -26,126 +28,8 @@ local function loadRaceTrack()
     racetrack[1].x = 100
     racetrack[1].y = 100
     racetrack[1].rotation = 0       -- radians
-    racetrack[1].link[1] = 2
-    racetrack[1].link[2] = 4
-
-    racetrack[2].x = racetrack[1].x + celllength / 4
-    racetrack[2].y = racetrack[1].y + cellwidth / 2
-    racetrack[2].rotation = 0       -- radians
-    racetrack[2].link[1] = 4
-    racetrack[2].link[2] = 5
-    racetrack[2].link[3] = 6
-
-    racetrack[3].x = racetrack[1].x
-    racetrack[3].y = racetrack[1].y + cellwidth
-    racetrack[3].rotation = 0       -- radians
-    racetrack[3].link[1] = 2
-    racetrack[3].link[2] = 6
-
-    racetrack[4].x = racetrack[1].x + celllength / 2
-    racetrack[4].y = racetrack[1].y
-    racetrack[4].rotation = 0       -- radians
-    racetrack[4].link[1] = 5
-    racetrack[4].link[2] = 7
-
-    racetrack[5].x = racetrack[2].x + celllength / 2
-    racetrack[5].y = racetrack[2].y
-    racetrack[5].rotation = 0       -- radians
-    racetrack[5].link[1] = 7
-    racetrack[5].link[2] = 8
-    racetrack[5].link[3] = 9
-
-    racetrack[6].x = racetrack[3].x + celllength / 2
-    racetrack[6].y = racetrack[3].y
-    racetrack[6].rotation = 0       -- radians
-    racetrack[6].link[1] = 5
-    racetrack[6].link[2] = 9
-
-    racetrack[7].x = racetrack[4].x + celllength / 2
-    racetrack[7].y = racetrack[4].y
-    racetrack[7].rotation = 0       -- radians
-    racetrack[7].link[1] = 8
-    racetrack[7].link[2] = 10
-
-    racetrack[8].x = racetrack[5].x + celllength / 2
-    racetrack[8].y = racetrack[5].y
-    racetrack[8].rotation = 0       -- radians
-    racetrack[8].link[1] = 11
-
-    racetrack[9].x = racetrack[6].x + celllength / 2
-    racetrack[9].y = racetrack[6].y
-    racetrack[9].rotation = 0       -- radians
-    racetrack[9].link[1] = 8
-    racetrack[9].link[2] = 12
-
-    racetrack[10].x = racetrack[7].x + celllength / 2
-    racetrack[10].y = racetrack[7].y
-    racetrack[10].rotation = 0       -- radians
-    racetrack[10].link[1] = 13
-    -- racetrack[11].link[1] = 17
-
-    racetrack[11].x = racetrack[8].x + celllength / 2
-    racetrack[11].y = racetrack[8].y + cellwidth / 2
-    racetrack[11].rotation = 0.7853       -- radians
-    racetrack[11].isBrakeZone = true
-    racetrack[11].link[1] = 15
-    racetrack[11].link[2] = 14
-
-    racetrack[12].x = racetrack[9].x + celllength / 2
-    racetrack[12].y = racetrack[9].y + cellwidth / 2 - 5
-    racetrack[12].rotation = 0.7853       -- radians
-    racetrack[12].isBrakeZone = true
-    racetrack[12].link[1] = 14
-
-    racetrack[13].x = racetrack[10].x + celllength / 2
-    racetrack[13].y = racetrack[10].y + cellwidth / 2 - 5
-    racetrack[13].rotation = 0.7853       -- radians
-    racetrack[13].isBrakeZone = true
-    racetrack[13].link[1] = 17
-
-    racetrack[14].x = racetrack[12].x + 25
-    racetrack[14].y = racetrack[12].y + cellwidth
-    racetrack[14].rotation = 1.5706       -- radians
-    racetrack[14].brakecheck = 1
-    racetrack[14].link[1] = 16
-    racetrack[14].link[2] = 20
-
-    racetrack[15].x = racetrack[11].x + 30
-    racetrack[15].y = racetrack[11].y + cellwidth
-    racetrack[15].rotation = 1.1       -- radians
-    racetrack[15].isBrakeZone = true
-    racetrack[15].link[1] = 16
-
-    racetrack[16].x = racetrack[15].x - 5
-    racetrack[16].y = racetrack[14].y + celllength / 4
-    racetrack[16].rotation = 1.5706       -- radians
-    racetrack[16].brakecheck = 1
-    racetrack[16].link[1] = 19
-    racetrack[16].link[2] = 20
-
-    racetrack[17].x = racetrack[13].x + 37
-    racetrack[17].y = racetrack[13].y + 58
-    racetrack[17].rotation = 1.2        -- radians
-    racetrack[17].isBrakeZone = true
-    racetrack[17].link[1] = 15
-    racetrack[17].link[2] = 18
-
-    racetrack[18].x = racetrack[17].x + 10
-    racetrack[18].y = racetrack[14].y
-    racetrack[18].rotation = 1.5706        -- radians
-    racetrack[18].isBrakeZone = true
-    racetrack[18].link[1] = 19
-    racetrack[18].link[2] = 16
-
-    racetrack[19].x = racetrack[18].x - 10
-    racetrack[19].y = racetrack[18].y + celllength / 2
-    racetrack[19].rotation = 1.5706        -- radians
-    racetrack[19].brakecheck = 1
-
-    racetrack[20].x = racetrack[14].x
-    racetrack[20].y = racetrack[14].y + celllength / 2
-    racetrack[20].rotation = 1.5706        -- radians
-
+    -- racetrack[1].link[1] = 2
+    -- racetrack[1].link[2] = 4
 end
 
 local function loadCars()
@@ -230,6 +114,10 @@ function race.keyreleased(key, scancode)
 	if scancode == "=" then
 		ZOOMFACTOR = ZOOMFACTOR + 0.05
 	end
+
+    if key == "e" then
+        EDIT_MODE = not EDIT_MODE
+    end
 
 end
 
@@ -319,9 +207,27 @@ function race.mousereleased(rx, ry, x, y, button)
     end
 end
 
+function race.wheelmoved(x, y)
+
+	if y > 0 then
+		-- wheel moved up. Zoom in
+		ZOOMFACTOR = ZOOMFACTOR + 0.05
+	end
+	if y < 0 then
+		ZOOMFACTOR = ZOOMFACTOR - 0.05
+	end
+	-- if ZOOMFACTOR < 0.8 then ZOOMFACTOR = 0.8 end
+	if ZOOMFACTOR > 3 then ZOOMFACTOR = 3 end
+	print("Zoom factor = " .. ZOOMFACTOR)
+end
+
 function race.draw()
 
     cam:attach()
+
+    -- draw the track background first
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 1, 1)
 
     -- draw the track
     for k, v in pairs(racetrack) do
@@ -388,8 +294,6 @@ function race.draw()
     love.graphics.print("Stops in corner: " .. cars[1].brakestaken, drawx, drawy)
     drawy = drawy + 35
 
-
-
     -- draw the gear stick on top of the sidebarwidth
     -- draw the lines on the gear stick first
     love.graphics.line(gearstick[1].x, gearstick[1].y, gearstick[2].x, gearstick[2].y)
@@ -397,7 +301,6 @@ function race.draw()
     love.graphics.line(gearstick[5].x, gearstick[5].y, gearstick[6].x, gearstick[6].y)
     local drawy = gearstick[1].y - (gearstick[1].y - gearstick[2].y) / 2
     love.graphics.line(gearstick[1].x, drawy, gearstick[6].x, drawy)
-
     for k, v in pairs(gearstick) do
         if cars[1].gear == k then           -- set the colour green if this gear is selected
             love.graphics.setColor(0,1,0,1)
@@ -405,6 +308,12 @@ function race.draw()
             love.graphics.setColor(1,1,1,1)
         end
         love.graphics.circle("fill", v.x, v.y, 10)
+    end
+
+    -- edit mode?
+    if EDIT_MODE then
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.print("EDIT MODE", 50, 50)
     end
 
 
@@ -421,7 +330,140 @@ function race.update(dt)
 
     cam:setZoom(ZOOMFACTOR)
     cam:setPos(TRANSLATEX, TRANSLATEY)
-
 end
 
 return race
+
+-- local function loadRaceTrack()
+--     -- loads the hardcoded track into the racetrack variable
+--
+--     -- initialise table
+--     for i = 1, numofcells do
+--         racetrack[i] = {}
+--         racetrack[i].link = {}
+--     end
+--
+--     racetrack[1].x = 100
+--     racetrack[1].y = 100
+--     racetrack[1].rotation = 0       -- radians
+--     racetrack[1].link[1] = 2
+--     racetrack[1].link[2] = 4
+--
+--     racetrack[2].x = racetrack[1].x + celllength / 4
+--     racetrack[2].y = racetrack[1].y + cellwidth / 2
+--     racetrack[2].rotation = 0       -- radians
+--     racetrack[2].link[1] = 4
+--     racetrack[2].link[2] = 5
+--     racetrack[2].link[3] = 6
+--
+--     racetrack[3].x = racetrack[1].x
+--     racetrack[3].y = racetrack[1].y + cellwidth
+--     racetrack[3].rotation = 0       -- radians
+--     racetrack[3].link[1] = 2
+--     racetrack[3].link[2] = 6
+--
+--     racetrack[4].x = racetrack[1].x + celllength / 2
+--     racetrack[4].y = racetrack[1].y
+--     racetrack[4].rotation = 0       -- radians
+--     racetrack[4].link[1] = 5
+--     racetrack[4].link[2] = 7
+--
+--     racetrack[5].x = racetrack[2].x + celllength / 2
+--     racetrack[5].y = racetrack[2].y
+--     racetrack[5].rotation = 0       -- radians
+--     racetrack[5].link[1] = 7
+--     racetrack[5].link[2] = 8
+--     racetrack[5].link[3] = 9
+--
+--     racetrack[6].x = racetrack[3].x + celllength / 2
+--     racetrack[6].y = racetrack[3].y
+--     racetrack[6].rotation = 0       -- radians
+--     racetrack[6].link[1] = 5
+--     racetrack[6].link[2] = 9
+--
+--     racetrack[7].x = racetrack[4].x + celllength / 2
+--     racetrack[7].y = racetrack[4].y
+--     racetrack[7].rotation = 0       -- radians
+--     racetrack[7].link[1] = 8
+--     racetrack[7].link[2] = 10
+--
+--     racetrack[8].x = racetrack[5].x + celllength / 2
+--     racetrack[8].y = racetrack[5].y
+--     racetrack[8].rotation = 0       -- radians
+--     racetrack[8].link[1] = 11
+--
+--     racetrack[9].x = racetrack[6].x + celllength / 2
+--     racetrack[9].y = racetrack[6].y
+--     racetrack[9].rotation = 0       -- radians
+--     racetrack[9].link[1] = 8
+--     racetrack[9].link[2] = 12
+--
+--     racetrack[10].x = racetrack[7].x + celllength / 2
+--     racetrack[10].y = racetrack[7].y
+--     racetrack[10].rotation = 0       -- radians
+--     racetrack[10].link[1] = 13
+--     -- racetrack[11].link[1] = 17
+--
+--     racetrack[11].x = racetrack[8].x + celllength / 2
+--     racetrack[11].y = racetrack[8].y + cellwidth / 2
+--     racetrack[11].rotation = 0.7853       -- radians
+--     racetrack[11].isBrakeZone = true
+--     racetrack[11].link[1] = 15
+--     racetrack[11].link[2] = 14
+--
+--     racetrack[12].x = racetrack[9].x + celllength / 2
+--     racetrack[12].y = racetrack[9].y + cellwidth / 2 - 5
+--     racetrack[12].rotation = 0.7853       -- radians
+--     racetrack[12].isBrakeZone = true
+--     racetrack[12].link[1] = 14
+--
+--     racetrack[13].x = racetrack[10].x + celllength / 2
+--     racetrack[13].y = racetrack[10].y + cellwidth / 2 - 5
+--     racetrack[13].rotation = 0.7853       -- radians
+--     racetrack[13].isBrakeZone = true
+--     racetrack[13].link[1] = 17
+--
+--     racetrack[14].x = racetrack[12].x + 25
+--     racetrack[14].y = racetrack[12].y + cellwidth
+--     racetrack[14].rotation = 1.5706       -- radians
+--     racetrack[14].brakecheck = 1
+--     racetrack[14].link[1] = 16
+--     racetrack[14].link[2] = 20
+--
+--     racetrack[15].x = racetrack[11].x + 30
+--     racetrack[15].y = racetrack[11].y + cellwidth
+--     racetrack[15].rotation = 1.1       -- radians
+--     racetrack[15].isBrakeZone = true
+--     racetrack[15].link[1] = 16
+--
+--     racetrack[16].x = racetrack[15].x - 5
+--     racetrack[16].y = racetrack[14].y + celllength / 4
+--     racetrack[16].rotation = 1.5706       -- radians
+--     racetrack[16].brakecheck = 1
+--     racetrack[16].link[1] = 19
+--     racetrack[16].link[2] = 20
+--
+--     racetrack[17].x = racetrack[13].x + 37
+--     racetrack[17].y = racetrack[13].y + 58
+--     racetrack[17].rotation = 1.2        -- radians
+--     racetrack[17].isBrakeZone = true
+--     racetrack[17].link[1] = 15
+--     racetrack[17].link[2] = 18
+--
+--     racetrack[18].x = racetrack[17].x + 10
+--     racetrack[18].y = racetrack[14].y
+--     racetrack[18].rotation = 1.5706        -- radians
+--     racetrack[18].isBrakeZone = true
+--     racetrack[18].link[1] = 19
+--     racetrack[18].link[2] = 16
+--
+--     racetrack[19].x = racetrack[18].x - 10
+--     racetrack[19].y = racetrack[18].y + celllength / 2
+--     racetrack[19].rotation = 1.5706        -- radians
+--     racetrack[19].brakecheck = 1
+--
+--     racetrack[20].x = racetrack[14].x
+--     racetrack[20].y = racetrack[14].y + celllength / 2
+--     racetrack[20].rotation = 1.5706        -- radians
+--
+-- end
