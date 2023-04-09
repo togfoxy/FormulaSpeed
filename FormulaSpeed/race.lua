@@ -67,6 +67,14 @@ local function loadGearStick()
     gearstick[6].y = gearstick[4].y
 end
 
+local function unselectAllCells()
+    -- uses a modular value to clear the current cell
+    if selectedcell ~= nil then
+        racetrack[selectedcell].isSelected = false
+    end
+    selectedcell = nil
+end
+
 local function addNewCell(x, y)
     local thisCell = {}
     thisCell.x = x
@@ -77,10 +85,7 @@ local function addNewCell(x, y)
     thisCell.speedCheck = nil               -- used at the exit of corners to check for overshoot
     thisCell.link = {}
     table.insert(racetrack, thisCell)
-
-    if selectedcell ~= nil then
-        racetrack[selectedcell].isSelected = false
-    end
+    unselectAllCells()
     selectedcell = #racetrack
 end
 
@@ -131,6 +136,7 @@ function race.keyreleased(key, scancode)
 
     if key == "e" then
         EDIT_MODE = not EDIT_MODE
+        unselectAllCells()
     end
 
     if EDIT_MODE then
@@ -157,7 +163,7 @@ function race.mousereleased(rx, ry, x, y, button)
         end
     end
 
-    selectedcell = nil      -- erase it here and reset it below
+    unselectAllCells()
     if smallestdist <= 15 then
 
         if racetrack[smallestkey].isSelected then
@@ -173,7 +179,6 @@ function race.mousereleased(rx, ry, x, y, button)
     end
 
     if not EDIT_MODE then
-
         if button == 1 then
             -- see if a gear is selected
             if cars[1].movesleft == 0 then
@@ -230,11 +235,8 @@ function race.mousereleased(rx, ry, x, y, button)
                     cars[1].brakestaken = cars[1].brakestaken + 1
                 end
             end
-
         end
     else    -- edit mode
-
-
     end
 end
 
@@ -290,26 +292,24 @@ function race.draw()
             love.graphics.setColor(1, 0, 1, 1)
             love.graphics.circle("fill", v.x, v.y, 5)
             -- draw the heading of the dot
-            local x2, y2 = cf.addVectorToPoint(v.x, v.y, math.deg(v.rotation) + 90, 10)
+            local x2, y2 = cf.addVectorToPoint(v.x, v.y, math.deg(v.rotation) + 90, 15)
             love.graphics.line(v.x, v.y, x2, y2)
 
             -- draw the cell number
             love.graphics.print(k, v.x + 6, v.y - 6)
 
-
             -- draw the cell images
-            if v.isBrakeZone then
+            if v.isCorner then
                 love.graphics.setColor(1, 1, 0, 1)
             else
-
                 love.graphics.setColor(1, 1, 1, 1)
             end
             love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
 
-            -- draw the selected cell
+            -- draw the selected cell over the normal cell
             if v.isSelected then
-                love.graphics.setColor(1, 1, 1, 0.5)
-                love.graphics.rectangle("fill", v.x - celllength / 4, v.y - cellwidth / 4, celllength / 2, cellwidth / 2)
+                love.graphics.setColor(1, 1, 0, 1)
+                love.graphics.draw(IMAGE[enum.imageCellShaded], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
             end
         end
 
@@ -372,8 +372,6 @@ function race.draw()
         love.graphics.setColor(1,1,1,1)
         love.graphics.print("EDIT MODE", 50, 50)
     end
-
-
 end
 
 function race.update(dt)
