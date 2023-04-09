@@ -22,5 +22,14 @@ function fileops.loadRaceTrack()
     end
 end
 
+function fileops.saveRaceTrack(racetrack)
+    local savefile = savedir .. "racetrack.dat"
+
+    local serialisedString = bitser.dumps(racetrack)
+    local success, message = nativefs.write(savefile, serialisedString)
+
+    return success
+end
+
 
 return fileops

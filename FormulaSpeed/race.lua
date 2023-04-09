@@ -153,6 +153,7 @@ function race.keyreleased(key, scancode)
     if EDIT_MODE then
         local x, y = love.mouse.getPosition()
         local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
+
         if key == "c" then  -- add new cell
             addNewCell(camx, camy)
         end
@@ -170,6 +171,14 @@ function race.keyreleased(key, scancode)
                 unselectAllCells()
                 previouscell = nil
                 selectedcell = nil
+            end
+        end
+
+        if key == "s" then          -- capital S
+            -- save the track
+            if love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") then
+                local success = fileops.saveRaceTrack(racetrack)
+                print(success)
             end
         end
     end
