@@ -394,6 +394,25 @@ function race.draw()
         love.graphics.setColor(1,1,1,1)
         love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
     end
+
+    -- draw any mouse line things
+    if EDIT_MODE then       -- note there is another EDIT_MODE after camera detach
+        if love.mouse.isDown(2) then
+            local cell = getSelectedCell()
+            if cell ~= nil then
+                -- button 2 is being dragged from the selected cell
+                local drawx1 = racetrack[cell].x
+                local drawy1 = racetrack[cell].y
+
+                local drawx2, drawy2 = love.mouse.getPosition()
+                drawx2, drawy2 = cam:toWorld(drawx2, drawy2)
+
+                love.graphics.setColor(1,1,1,1)
+                love.graphics.line(drawx1, drawy1, drawx2, drawy2)
+            end
+        end
+    end
+
     cam:detach()
 
     -- draw the sidebar
@@ -433,15 +452,6 @@ function race.draw()
     if EDIT_MODE then
         love.graphics.setColor(1,1,1,1)
         love.graphics.print("EDIT MODE", 50, 50)
-
-        if love.mouse.isDown(2) and mousepresseddrawx ~= nil then
-            local x, y = love.mouse.getPosition()
-            local rx, ry = res.toGame(x,y)
-            -- local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
-            love.graphics.setColor(1,1,1,1)
-            -- love.graphics.line(mousepresseddrawx, mousepresseddrawy, camx, camy)
-            love.graphics.line(mousepresseddrawx, mousepresseddrawy, rx, ry)
-        end
     end
 end
 
