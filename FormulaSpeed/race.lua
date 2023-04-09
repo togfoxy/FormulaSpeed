@@ -15,6 +15,7 @@ local GAME_MODE
 
 local EDIT_MODE = false                -- true/false
 local selectedcell = nil                -- used during edit
+local previouscell = nil
 
 local function loadRaceTrack()
     -- loads the hardcoded track into the racetrack variable
@@ -75,7 +76,10 @@ local function unselectAllCells()
     selectedcell = nil
 end
 
-local function addNewCell(x, y)
+local function addNewCell(x, y, previouscell)
+    -- adds a new cell at the provided x/y
+    -- includes a link from previouscell to this cell if not nil
+
     local thisCell = {}
     thisCell.x = x
     thisCell.y = y
@@ -85,8 +89,15 @@ local function addNewCell(x, y)
     thisCell.speedCheck = nil               -- used at the exit of corners to check for overshoot
     thisCell.link = {}
     table.insert(racetrack, thisCell)
+
+    if previouscell ~= nil then
+        -- link from previous cell to this cell
+        racetrack[previouscell].link[#racetrack] = true
+    end
+
     unselectAllCells()
     selectedcell = #racetrack
+    previouscell = selectedcell
 end
 
 local function getSelectedCell()
@@ -140,10 +151,15 @@ function race.keyreleased(key, scancode)
     end
 
     if EDIT_MODE then
+        local x, y = love.mouse.getPosition()
+        local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
         if key == "c" then  -- add new cell
-            local x, y = love.mouse.getPosition()
-            local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
             addNewCell(camx, camy)
+        end
+
+        if key == "l" then  -- add new cell and link it to the previous cell
+            addNewCell(camx, camy, previouscell)
+            previouscell = #racetrack
         end
     end
 end
@@ -315,11 +331,11 @@ function race.draw()
 
         -- draw the links
         for q, w in pairs(v.link) do
-            if racetrack[w] ~= nil then
-                if racetrack[w].x ~= nil then
-                    love.graphics.setColor(1, 0, 1, 0.5)
-                    love.graphics.line(v.x, v.y, racetrack[w].x, racetrack[w].y)
-                end
+            if w == true then
+                local x2 = racetrack[q].x
+                local y2 = racetrack[q].y
+                love.graphics.setColor(1, 0, 1, 0.5)
+                love.graphics.line(v.x, v.y, x2, y2)
             end
         end
     end
