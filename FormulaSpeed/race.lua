@@ -2,7 +2,6 @@ race = {}
 
 local racetrack = {}          -- the network of cells
 local cars = {}               -- a table of cars
-local numofcells = 999        -- arbitrary number
 local numofcars = 6
 
 local celllength = 128
@@ -15,15 +14,10 @@ local gearstick = {}            -- made this a table so I can do graphics stuff
 local GAME_MODE
 
 local EDIT_MODE = false                -- true/false
+local selectedcell = nil                -- used during edit
 
 local function loadRaceTrack()
     -- loads the hardcoded track into the racetrack variable
-
-    -- initialise table
-    -- for i = 1, numofcells do
-    --     racetrack[i] = {}
-    --     racetrack[i].link = {}
-    -- end
 
     racetrack = {}
     racetrack[1] = {}
@@ -78,8 +72,16 @@ local function addNewCell(x, y)
     thisCell.x = x
     thisCell.y = y
     thisCell.rotation = 0
+    thisCell.isSelected = true
+    thisCell.isCorner = false
+    thisCell.speedCheck = nil               -- used at the exit of corners to check for overshoot
     thisCell.link = {}
     table.insert(racetrack, thisCell)
+
+    if selectedcell ~= nil then
+        racetrack[selectedcell].isSelected = false
+    end
+    selectedcell = #racetrack
 end
 
 local function getSelectedCell()
@@ -138,35 +140,39 @@ function race.keyreleased(key, scancode)
             addNewCell(camx, camy)
         end
     end
-
 end
 
 function race.mousereleased(rx, ry, x, y, button)
 
-    if not EDIT_MODE
-        local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
+    local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
 
-        -- determine which cell is closest to the mouse click
-        local smallestdist = 999999
-        local smallestkey = nil
-        for k, v in pairs(racetrack) do
-            local dist = cf.getDistance(camx, camy, v.x, v.y)
-            if dist > 0 and dist < smallestdist then
-                smallestdist = dist
-                smallestkey = k
-            end
+    -- determine which cell is closest to the mouse click
+    local smallestdist = 999999
+    local smallestkey = nil
+    for k, v in pairs(racetrack) do
+        local dist = cf.getDistance(camx, camy, v.x, v.y)
+        if dist > 0 and dist < smallestdist then
+            smallestdist = dist
+            smallestkey = k
         end
-        if smallestdist <= 15 then
-            if racetrack[smallestkey].isSelected then
-                racetrack[smallestkey].isSelected = false
-            else
-                -- unselect every cell
-                for i = 1, numofcells do
-                    racetrack[i].isSelected = false
-                end
-                racetrack[smallestkey].isSelected = true
+    end
+
+    selectedcell = nil      -- erase it here and reset it below
+    if smallestdist <= 15 then
+
+        if racetrack[smallestkey].isSelected then
+            racetrack[smallestkey].isSelected = false
+        else
+            -- unselect every cell
+            for i = 1, #racetrack do
+                racetrack[i].isSelected = false
             end
+            racetrack[smallestkey].isSelected = true
+            selectedcell = smallestkey
         end
+    end
+
+    if not EDIT_MODE then
 
         if button == 1 then
             -- see if a gear is selected
@@ -246,13 +252,25 @@ function race.wheelmoved(x, y)
 	print("Zoom factor = " .. ZOOMFACTOR)
 end
 
+function race.mousemoved( x, y, dx, dy, istouch)
+    if EDIT_MODE then
+        if love.mouse.isDown(1) then
+            if selectedcell ~= nil then
+                local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
+                racetrack[selectedcell].x = camx
+                racetrack[selectedcell].y = camy
+            end
+        end
+    end
+end
+
 function race.draw()
 
     cam:attach()
 
     -- draw the track background first
     love.graphics.setColor(1,1,1,1)
-    love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 1, 1)
+    love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
 
     -- draw the track
     for k, v in pairs(racetrack) do

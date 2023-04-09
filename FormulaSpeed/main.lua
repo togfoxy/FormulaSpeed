@@ -55,6 +55,13 @@ function love.wheelmoved(x, y)
 	end
 end
 
+function love.mousemoved( x, y, dx, dy, istouch )
+	local currentscene = cf.currentScreenName(SCREEN_STACK)
+	if currentscene == enum.sceneRace then
+		race.mousemoved(x, y)
+	end
+end
+
 function love.load()
     res.init({width = 1920, height = 1080, mode = 2})
 	res.setMode(1920, 1080, {resizable = true})
