@@ -200,6 +200,28 @@ function race.keyreleased(key, scancode)
                 print(success)
             end
         end
+
+        if key == "c" then
+            -- toggle corner
+            local cell = getSelectedCell()
+            if cell ~= nil then
+                racetrack[cell].isCorner = not racetrack[cell].isCorner
+            end
+        end
+
+        if key == "s" then          -- lower case s for 'speed'
+            local cell = getSelectedCell()
+            if cell ~= nil then     -- increment the speed check
+                if racetrack[cell].speedCheck == nil then
+                    racetrack[cell].speedCheck = 1
+                else
+                    racetrack[cell].speedCheck = racetrack[cell].speedCheck + 1
+                end
+                if racetrack[cell].speedCheck > 3 then
+                    racetrack[cell].speedCheck = nil
+                end
+            end
+        end
     end
 end
 
@@ -244,7 +266,9 @@ function race.mousereleased(rx, ry, x, y, button)
                         -- if ending turn in corner then give credit for the braking
                         if cars[1].movesleft < 1 then
                             cars[1].movesleft = 0
-                            cars[1].brakestaken = cars[1].brakestaken + 1
+                            if racetrack[cars[1].cell].isCorner then
+                                cars[1].brakestaken = cars[1].brakestaken + 1
+                            end
                         end
 
                         -- if leaving corner, see if correct number of stops made
@@ -259,8 +283,10 @@ function race.mousereleased(rx, ry, x, y, button)
                                     print("Crashed out")
                                 else
                                     cars[1].wptyres = cars[1].wptyres - 1
+                                    print("Overshoot!")
                                 end
                             end
+                            cars[1].brakestaken = 0     -- reset for next corner
                         end
                     end
                 else
@@ -359,11 +385,21 @@ function race.draw()
             end
             love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
 
+            -- draw the speed limit
+            if v.speedCheck ~= nil then
+                love.graphics.setColor(1,0,0,1)
+                love.graphics.print(v.speedCheck, v.x - 3, v.y + 3)
+                love.graphics.circle("line", v.x, v.y + 10, 12)
+            end
+
+
             -- draw the selected cell over the normal cell
             if v.isSelected then
-                love.graphics.setColor(1, 1, 0, 1)
+                love.graphics.setColor(0, 1, 0, 1)
                 love.graphics.draw(IMAGE[enum.imageCellShaded], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
             end
+
+
         end
 
         -- draw the links
@@ -412,7 +448,7 @@ function race.draw()
 
     -- draw the sidebar
     local drawx = SCREEN_WIDTH - sidebarwidth
-    love.graphics.setColor(1, 1, 1, 0.25)
+    love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.rectangle("fill", drawx, 0, sidebarwidth, SCREEN_HEIGHT)
 
     drawx = drawx + 10
@@ -425,6 +461,8 @@ function race.draw()
     love.graphics.print("Moves left: " .. cars[1].movesleft, drawx, drawy)
     drawy = drawy + 35
     love.graphics.print("Stops in corner: " .. cars[1].brakestaken, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Tyre wear points: " .. cars[1].wptyres, drawx, drawy)
     drawy = drawy + 35
 
     -- draw the gear stick on top of the sidebarwidth
