@@ -71,7 +71,9 @@ end
 local function unselectAllCells()
     -- uses a modular value to clear the current cell
     if selectedcell ~= nil then
-        racetrack[selectedcell].isSelected = false
+        if racetrack[selectedcell] ~= nil then
+            racetrack[selectedcell].isSelected = false
+        end
     end
     selectedcell = nil
 end
@@ -161,6 +163,17 @@ function race.keyreleased(key, scancode)
             addNewCell(camx, camy, previouscell)
             previouscell = #racetrack
         end
+
+        if key == "delete" then
+            if selectedcell ~= nil then
+                -- delete cell
+                -- table.remove(racetrack, selectedcell)
+                racetrack[selectedcell] = nil
+                unselectAllCells()
+                previouscell = nil
+                selectedcell = nil
+            end
+        end
     end
 end
 
@@ -181,14 +194,9 @@ function race.mousereleased(rx, ry, x, y, button)
 
     unselectAllCells()
     if smallestdist <= 15 then
-
         if racetrack[smallestkey].isSelected then
             racetrack[smallestkey].isSelected = false
         else
-            -- unselect every cell
-            for i = 1, #racetrack do
-                racetrack[i].isSelected = false
-            end
             racetrack[smallestkey].isSelected = true
             selectedcell = smallestkey
         end
@@ -332,10 +340,15 @@ function race.draw()
         -- draw the links
         for q, w in pairs(v.link) do
             if w == true then
-                local x2 = racetrack[q].x
-                local y2 = racetrack[q].y
-                love.graphics.setColor(1, 0, 1, 0.5)
-                love.graphics.line(v.x, v.y, x2, y2)
+                if racetrack[q] == nil then
+                    -- this cell use to exist but now it's deleted
+                    w = false
+                else
+                    local x2 = racetrack[q].x
+                    local y2 = racetrack[q].y
+                    love.graphics.setColor(1, 0, 1, 0.5)
+                    love.graphics.line(v.x, v.y, x2, y2)
+                end
             end
         end
     end
