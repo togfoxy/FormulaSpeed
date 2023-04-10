@@ -2,6 +2,8 @@
 
 Releases: https://github.com/togfoxy/FormulaSpeed/releases
 
+https://i.postimg.cc/TPBg2JTc/image.png
+
 Select your gear, roll the dice, move your car, negotiate the corners - win!
 
 Instructions
