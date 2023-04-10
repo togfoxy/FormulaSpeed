@@ -23,10 +23,10 @@ local function unselectAllCells()
     end
 end
 
-local function addNewCell(x, y, previouscell)
+local function addNewCell(x, y, pcell)
     -- adds a new cell at the provided x/y
     -- makes the new cell the selected cell
-    -- includes a link from previouscell to this cell if not nil
+    -- includes a link from pcell to this cell if not nil
 
     local thisCell = {}
     thisCell.x = x
@@ -38,13 +38,13 @@ local function addNewCell(x, y, previouscell)
     thisCell.link = {}
     table.insert(racetrack, thisCell)
 
-    if previouscell ~= nil then
+    if pcell ~= nil then
         -- link from previous cell to this cell
-        racetrack[previouscell].link[#racetrack] = true
+        racetrack[pcell].link[#racetrack] = true
     end
 
     unselectAllCells()
-    previouscell = #racetrack
+    previouscell = #racetrack       -- global
 end
 
 local function getSelectedCell()
@@ -209,16 +209,22 @@ function race.keyreleased(key, scancode)
             end
         end
 
-        if key == "s" then          -- lower case s for 'speed'
-            local cell = getSelectedCell()
-            if cell ~= nil then     -- increment the speed check
-                if racetrack[cell].speedCheck == nil then
-                    racetrack[cell].speedCheck = 1
-                else
-                    racetrack[cell].speedCheck = racetrack[cell].speedCheck + 1
-                end
-                if racetrack[cell].speedCheck > 3 then
-                    racetrack[cell].speedCheck = nil
+        if key == "s" then          -- lower case s for 'speed' or uppercase S for SAVE
+            -- save the track
+            if love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") then
+                local success = fileops.saveRaceTrack(racetrack)
+                print(success)
+            else
+                local cell = getSelectedCell()
+                if cell ~= nil then     -- increment the speed check
+                    if racetrack[cell].speedCheck == nil then
+                        racetrack[cell].speedCheck = 1
+                    else
+                        racetrack[cell].speedCheck = racetrack[cell].speedCheck + 1
+                    end
+                    if racetrack[cell].speedCheck > 3 then
+                        racetrack[cell].speedCheck = nil
+                    end
                 end
             end
         end
@@ -311,7 +317,8 @@ end
 
 function race.wheelmoved(x, y)
 
-    if not EDIT_MODE or (EDIT_MODE and selectedcell == nil) then
+    if not EDIT_MODE then
+
     	if y > 0 then
     		-- wheel moved up. Zoom in
     		ZOOMFACTOR = ZOOMFACTOR + 0.05
@@ -324,13 +331,28 @@ function race.wheelmoved(x, y)
     	print("Zoom factor = " .. ZOOMFACTOR)
     else
         -- in edit mode with a selected cell. Rotate it
-        if y < 0 then -- mouse wheel down
-            racetrack[selectedcell].rotation = racetrack[selectedcell].rotation + 0.1
+        local cell = getSelectedCell()
+        if cell == nil then -- no cell selected. Zoom
+            -- zoom
+            if y > 0 then
+        		-- wheel moved up. Zoom in
+        		ZOOMFACTOR = ZOOMFACTOR + 0.05
+        	end
+        	if y < 0 then
+        		ZOOMFACTOR = ZOOMFACTOR - 0.05
+        	end
+        	-- if ZOOMFACTOR < 0.8 then ZOOMFACTOR = 0.8 end
+        	if ZOOMFACTOR > 3 then ZOOMFACTOR = 3 end
+        	print("Zoom factor = " .. ZOOMFACTOR)
         else
-            racetrack[selectedcell].rotation = racetrack[selectedcell].rotation - 0.1
+            if y < 0 then -- mouse wheel down
+                racetrack[cell].rotation = racetrack[cell].rotation + 0.1
+            else
+                racetrack[cell].rotation = racetrack[cell].rotation - 0.1
+            end
+            if racetrack[cell].rotation < 0 then racetrack[cell].rotation = (2 * math.pi) end
+            if racetrack[cell].rotation > (2 * math.pi) then racetrack[cell].rotation = 0 end
         end
-        if racetrack[selectedcell].rotation < 0 then racetrack[selectedcell].rotation = (2 * math.pi) end
-        if racetrack[selectedcell].rotation > (2 * math.pi) then racetrack[selectedcell].rotation = 0 end
     end
 end
 
@@ -453,9 +475,18 @@ function race.draw()
 
     drawx = drawx + 10
     drawy = 75
+
     love.graphics.setColor(1,1,1,1)
     love.graphics.print("Cell #" .. cars[1].cell, drawx, drawy)
     drawy = drawy + 35
+    -- draw the links for the current cell
+    for k, v in pairs(racetrack[cars[1].cell].link) do
+        if v == true then
+            love.graphics.print("Links to " .. k, drawx, drawy)
+            drawy = drawy + 35
+        end
+    end
+
     love.graphics.print("Gear: " .. cars[1].gear, drawx, drawy)
     drawy = drawy + 35
     love.graphics.print("Moves left: " .. cars[1].movesleft, drawx, drawy)
@@ -495,10 +526,15 @@ function race.update(dt)
         loadCars()
         loadGearStick()
         GAME_MODE = enum.gamemodeGearSelect
+
+        -- a one time reposition of camera
+        TRANSLATEX = racetrack[cars[1].cell].x
+        TRANSLATEY = racetrack[cars[1].cell].y
+        cam:setPos(TRANSLATEX, TRANSLATEY)
     end
 
     cam:setZoom(ZOOMFACTOR)
-    cam:setPos(TRANSLATEX, TRANSLATEY)
+    cam:setPos(TRANSLATEX,	TRANSLATEY)
 end
 
 return race
