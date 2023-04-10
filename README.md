@@ -1,4 +1,4 @@
-# Formula Speed
+# Formula Speed - a turn-based racing car board game
 
 Releases: https://github.com/togfoxy/FormulaSpeed/releases
 
@@ -43,5 +43,24 @@ Controls
 Use left mouse button to select a gear.
 
 Use right moust button to select a cell in front of the race car.
+
+Roadmap
+=======
+
+Audio.
+
+Implementation of more rules around braking, wrecks and road handling.
+
+Five additional bot cars.
+
+A campaign.
+
+A shop that lets you upgrade your car.
+
+A shop that lets you buy drivers.
+
+An editor that lets you create your own tracks.
+
+
 
 
