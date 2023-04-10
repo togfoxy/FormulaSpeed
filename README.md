@@ -27,6 +27,12 @@ Aim to 'stop' your car on each corner according to the number of times indicated
 
 Failing to stop the required number of times on each corner will result in tyre damage or crash.
 
+Use the matrix at the top of the screen to see how many squares each gear may take you. The actual number will be a random number in the given range.
+
+For the moment, every new game gives you a random gearbox with random ability.
+
+The game presents a 'ghost' car if you play more than one game. The ghost reflects your personal best. Beat the ghost - beat your personal best.
+
 Play the track as many times as you like and beat your personal best time.
 
 
