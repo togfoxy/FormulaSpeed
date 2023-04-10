@@ -288,7 +288,8 @@ function race.mousereleased(rx, ry, x, y, button)
                                     -- elimination
                                     print("Crashed out")
                                 else
-                                    cars[1].wptyres = cars[1].wptyres - 1
+                                    -- see how many cells was overshot
+                                    cars[1].wptyres = cars[1].wptyres - cars[1].movesleft
                                     print("Overshoot!")
                                 end
                             end
@@ -346,7 +347,13 @@ function race.wheelmoved(x, y)
         	print("Zoom factor = " .. ZOOMFACTOR)
         else
             if y < 0 then -- mouse wheel down
-                racetrack[cell].rotation = racetrack[cell].rotation + 0.1
+                if love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") then
+                    -- rotate a little bit
+                    racetrack[cell].rotation = racetrack[cell].rotation + 0.05
+                else
+                    -- rotate normal
+                    racetrack[cell].rotation = racetrack[cell].rotation + 0.1
+                end
             else
                 racetrack[cell].rotation = racetrack[cell].rotation - 0.1
             end
@@ -470,7 +477,7 @@ function race.draw()
 
     -- draw the sidebar
     local drawx = SCREEN_WIDTH - sidebarwidth
-    love.graphics.setColor(0, 0, 0, 0.5)
+    love.graphics.setColor(0, 0, 0, 0.75)
     love.graphics.rectangle("fill", drawx, 0, sidebarwidth, SCREEN_HEIGHT)
 
     drawx = drawx + 10
