@@ -41,6 +41,7 @@ local function addNewCell(x, y, pcell)
     if pcell ~= nil then
         -- link from previous cell to this cell
         racetrack[pcell].link[#racetrack] = true
+        racetrack[#racetrack].rotation = racetrack[pcell].rotation
         previouscell = nil
     else
         previouscell = #racetrack       -- global
@@ -694,44 +695,46 @@ function race.draw()
         love.graphics.print(k, v.x - 4, v.y - 6)
     end
 
-    -- draw the topbar (gearbox matrix)
-    local topbarheight = 225
-    love.graphics.setColor(0, 0, 0, 0.75)
-    love.graphics.rectangle("fill", 0, 0, SCREEN_WIDTH - sidebarwidth, topbarheight)
+    if not EDIT_MODE then
+        -- draw the topbar (gearbox matrix)
+        local topbarheight = 225
+        love.graphics.setColor(0, 0, 0, 0.75)
+        love.graphics.rectangle("fill", 0, 0, SCREEN_WIDTH - sidebarwidth, topbarheight)
 
-    -- draw the gearbox
-    -- draw the speed along the top
-    local drawx = 100
-    local drawy = 25
-    love.graphics.setColor(1,1,1,1)
-    for i = 1, 40 do
-        love.graphics.print(i, drawx + 10, drawy)       -- the +10 centres the text
-        drawx = drawx + 30
-    end
-
-    -- draw the gears down the side
-    drawx = 50
-    drawy = 50
-    for i = 1, 6 do
+        -- draw the gearbox
+        -- draw the speed along the top
+        local drawx = 100
+        local drawy = 25
         love.graphics.setColor(1,1,1,1)
-        love.graphics.print("Gear " .. i, drawx, drawy + 4)         -- the +4 centres the text
-        drawy = drawy + 25
-    end
+        for i = 1, 40 do
+            love.graphics.print(i, drawx + 10, drawy)       -- the +10 centres the text
+            drawx = drawx + 30
+        end
 
-    -- now fill in the matrix
-    -- add white boxes everywhere
+        -- draw the gears down the side
+        drawx = 50
+        drawy = 50
+        for i = 1, 6 do
+            love.graphics.setColor(1,1,1,1)
+            love.graphics.print("Gear " .. i, drawx, drawy + 4)         -- the +4 centres the text
+            drawy = drawy + 25
+        end
 
-    for i = 1, 6 do
-        for j = 1, 40 do
-            local drawx1 = 70 + (30 * j)
-            local drawy1 = 25 + (25 * i)
-            love.graphics.setColor(1,1,1,0.5)
-            love.graphics.rectangle("line", drawx1, drawy1, 30, 25)
+        -- now fill in the matrix
+        -- add white boxes everywhere
 
-            -- now fill the cell if a gear can access this speed
-            if j >= cars[1].gearbox[i][1] and j <= cars[1].gearbox[i][2] then
-                love.graphics.setColor(0,1,0,0.75)
-                love.graphics.rectangle("fill", drawx1, drawy1, 30, 25)
+        for i = 1, 6 do
+            for j = 1, 40 do
+                local drawx1 = 70 + (30 * j)
+                local drawy1 = 25 + (25 * i)
+                love.graphics.setColor(1,1,1,0.5)
+                love.graphics.rectangle("line", drawx1, drawy1, 30, 25)
+
+                -- now fill the cell if a gear can access this speed
+                if j >= cars[1].gearbox[i][1] and j <= cars[1].gearbox[i][2] then
+                    love.graphics.setColor(0,1,0,0.75)
+                    love.graphics.rectangle("fill", drawx1, drawy1, 30, 25)
+                end
             end
         end
     end
