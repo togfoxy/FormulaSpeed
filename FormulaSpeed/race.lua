@@ -11,8 +11,6 @@ local sidebarwidth = 250
 
 local gearstick = {}            -- made this a table so I can do graphics stuff
 
-local GAME_MODE
-
 local EDIT_MODE = false                -- true/false
 
 local previouscell = nil                -- previous cell placed during link command
@@ -42,10 +40,11 @@ local function addNewCell(x, y, pcell)
     if pcell ~= nil then
         -- link from previous cell to this cell
         racetrack[pcell].link[#racetrack] = true
+        previouscell = nil
+    else
+        previouscell = #racetrack       -- global
     end
-
     unselectAllCells()
-    previouscell = #racetrack       -- global
 end
 
 local function getSelectedCell()
@@ -85,6 +84,9 @@ local function loadCars()
     cars[1].wphandling = 2
     cars[1].movesleft = 0
     cars[1].brakestaken = 0             -- how many times did car stop in current corner
+    cars[1].isEliminated = false
+    cars[1].isSpun = false
+    cars[1].overshootcount = 0              -- used for special rule when wptyres == 0
 
     -- gearbox
     cars[1].gearbox = {}
@@ -115,6 +117,7 @@ local function loadCars()
 
     cars[1].gearbox[6][1] = love.math.random(20, 22)
     cars[1].gearbox[6][2] = love.math.random(29, 31)
+
 end
 
 local function loadGearStick()
@@ -162,6 +165,23 @@ local function getClosestCell(pointx, pointy)
     return nil
 end
 
+local function addCarMoves(carindex)
+    -- need to set the correct gear BEFORE calling this function
+    -- assign a random number of moves based on new gear
+    local low = cars[carindex].gearbox[cars[carindex].gear][carindex]
+    local high = cars[carindex].gearbox[cars[carindex].gear][2]
+    cars[carindex].movesleft = love.math.random(low, high)
+end
+
+local function checkForElimination(carindex)
+    -- check all wear points
+    if cars[carindex].wptyres < 0 then
+        cars[carindex].isEliminated = true
+    end
+
+
+end
+
 function race.keypressed( key, scancode, isrepeat )
 	-- this is in keypressed because the keyrepeat needs to be detected.
 
@@ -206,7 +226,7 @@ function race.keyreleased(key, scancode)
         local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
 
         if key == "n" then  -- add new cell
-            addNewCell(camx, camy)
+            addNewCell(camx, camy, nil)
         end
 
         if key == "l" then  -- add new cell and link it to the previous cell
@@ -280,10 +300,32 @@ function race.mousereleased(rx, ry, x, y, button)
                     end
                 end
                 if smallestdist <= 30 then
-                    if math.abs(smallestkey - cars[1].gear) <= 1 then
-                        cars[1].gear = smallestkey
-                        cars[1].movesleft = cars[1].gear
-                        GAME_MODE = enum.gamemodeMoveCar
+                    -- smallestkey is the gear selected
+                    local desiredgear = smallestkey
+                    local currentgear = cars[1].gear
+                    local gearchange = desiredgear - currentgear
+
+                    if gearchange >= -1 and gearchange <= 1 then
+                        -- a shift up/down or same gear is legit
+                        cars[1].gear = desiredgear
+                        addCarMoves(1)      -- car index
+                    elseif gearchange == -2 then -- a rapid shift down. Damage gearbox
+                        cars[1].wpgearbox = cars[1].wpgearbox - 1
+                        cars[1].gear = desiredgear
+                        addCarMoves(1)      -- car index
+                    elseif gearchange == -3 then -- a rapid shift down. Damage gearbox
+                        cars[1].wpgearbox = cars[1].wpgearbox - 1
+                        cars[1].wpbrakes = cars[1].wpbrakes - 1
+                        cars[1].gear = desiredgear
+                        addCarMoves(1)      -- car index
+                    elseif gearchange == -4 then -- a rapid shift down. Damage gearbox
+                        cars[1].wpgearbox = cars[1].wpgearbox - 1
+                        cars[1].wpbrakes = cars[1].wpbrakes - 1
+                        cars[1].wpengine = cars[1].wpengine - 1
+                        cars[1].gear = desiredgear
+                        addCarMoves(1)      -- car index
+                    else
+                        -- illegal shift. Do nothing
                     end
                 end
             end
@@ -319,14 +361,52 @@ function race.mousereleased(rx, ry, x, y, button)
                                 if brakescore >= 2 then
                                     -- elimination
                                     print("Crashed out")
+                                    cars[1].isEliminated = true
                                 else
                                     -- see how many cells was overshot
-                                    cars[1].wptyres = cars[1].wptyres - cars[1].movesleft
-                                    print("Overshoot!")
+                                    -- some complex rules about spinning etc
+                                    if cars[1].wptyres > 0 then
+                                        -- different set of rules
+                                        if cars[1].wptyres > cars[1].movesleft then
+                                            -- normal overshoot
+                                            cars[1].wptyres = cars[1].wptyres - cars[1].movesleft
+                                        elseif cars[1].wptyres == cars[1].movesleft then
+                                            -- spin
+                                            cars[1].wptyres = 0
+                                            cars[1].isSpun = true
+                                            cars[1].gear = 0
+                                        elseif cars[1].movesleft > cars[1].wptyres then
+                                            -- crash out
+                                            cars[1].isEliminated = true
+                                            cars[1].isSpun = true
+                                        end
+                                    elseif cars[1].wptyres == 0 then
+                                        -- special rules when wptyres == 0
+                                        if cars[1].movesleft == 1 then  -- oveshoot on zero tyres has an odd rule
+                                            cars[1].overshootcount = cars[1].overshootcount + 1
+                                            casr[1].isSpun = true
+                                            cars[1].gear = 0
+
+                                            if cars[1].overshootcount > 2 then
+                                                -- crash out
+                                                cars[1].isEliminated = true
+                                                cars[1].isSpun = true
+                                            end
+                                        elseif cars[1].movesleft > 1 then
+                                            -- crash
+                                            cars[1].isEliminated = true
+                                            cars[1].isSpun = true
+                                        else
+                                            error("Oops. Unexpected code executed", 394)
+                                        end
+                                    else
+                                        error("Oops. Unexpected code executed", 399)
+                                    end
                                 end
                             end
                             cars[1].brakestaken = 0     -- reset for next corner
                         end
+                        checkForElimination(1)      -- carindex
                     end
                 else
                 end
@@ -342,7 +422,7 @@ function race.mousereleased(rx, ry, x, y, button)
 
             if cell1 ~= nil and cell2 ~= nil then
                 -- link cell1 to cell2
-                racetrack[cell1].link[cell2] = true
+                racetrack[cell1].link[cell2] = not racetrack[cell1].link[cell2]
             end
         end
     end
@@ -387,7 +467,11 @@ function race.wheelmoved(x, y)
                     racetrack[cell].rotation = racetrack[cell].rotation + 0.1
                 end
             else
-                racetrack[cell].rotation = racetrack[cell].rotation - 0.1
+                if love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") then
+                    racetrack[cell].rotation = racetrack[cell].rotation - 0.05
+                else
+                    racetrack[cell].rotation = racetrack[cell].rotation - 0.1
+                end
             end
             if racetrack[cell].rotation < 0 then racetrack[cell].rotation = (2 * math.pi) end
             if racetrack[cell].rotation > (2 * math.pi) then racetrack[cell].rotation = 0 end
@@ -436,7 +520,7 @@ function race.draw()
             love.graphics.line(v.x, v.y, x2, y2)
 
             -- draw the cell number
-            love.graphics.print(k, v.x + 6, v.y - 6)
+            -- love.graphics.print(k, v.x + 6, v.y - 6)
 
             -- draw the cell images
             if v.isCorner then
@@ -483,7 +567,12 @@ function race.draw()
     for i = 1, 1 do
         local drawx = racetrack[cars[i].cell].x
         local drawy = racetrack[cars[i].cell].y
-        love.graphics.setColor(1,1,1,1)
+
+        if cars[i].isEliminated then
+            love.graphics.setColor(1,0,0,1)     -- red for crash
+        else
+            love.graphics.setColor(1,1,1,1)     -- white
+        end
         love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
     end
 
@@ -538,6 +627,10 @@ function race.draw()
     drawy = drawy + 35
     love.graphics.print("Tyre wear points: " .. cars[1].wptyres, drawx, drawy)
     drawy = drawy + 35
+    love.graphics.print("Brake wear points: " .. cars[1].wpbrakes, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Engine wear points: " .. cars[1].wpengine, drawx, drawy)
+    drawy = drawy + 35
 
     -- draw the gear stick on top of the sidebarwidth
     -- draw the lines on the gear stick first
@@ -555,15 +648,15 @@ function race.draw()
         love.graphics.circle("fill", v.x, v.y, 10)
     end
 
-    -- draw the topbar (gearbox)
-    local topbarheight = 100
+    -- draw the topbar (gearbox matrix)
+    local topbarheight = 225
     love.graphics.setColor(0, 0, 0, 0.75)
     love.graphics.rectangle("fill", 0, 0, SCREEN_WIDTH - sidebarwidth, topbarheight)
 
     -- draw the gearbox
     -- draw the speed along the top
     local drawx = 100
-    local drawy = 50
+    local drawy = 25
     love.graphics.setColor(1,1,1,1)
     for i = 1, 40 do
         love.graphics.print(i, drawx + 10, drawy)       -- the +10 centres the text
@@ -572,7 +665,7 @@ function race.draw()
 
     -- draw the gears down the side
     drawx = 50
-    drawy = 75
+    drawy = 50
     for i = 1, 6 do
         love.graphics.setColor(1,1,1,1)
         love.graphics.print("Gear " .. i, drawx, drawy + 4)         -- the +4 centres the text
@@ -585,7 +678,7 @@ function race.draw()
     for i = 1, 6 do
         for j = 1, 40 do
             local drawx1 = 70 + (30 * j)
-            local drawy1 = 50 + (25 * i)
+            local drawy1 = 25 + (25 * i)
             love.graphics.setColor(1,1,1,0.5)
             love.graphics.rectangle("line", drawx1, drawy1, 30, 25)
 
@@ -610,7 +703,6 @@ function race.update(dt)
         loadRaceTrack()
         loadCars()
         loadGearStick()
-        GAME_MODE = enum.gamemodeGearSelect
 
         -- a one time reposition of camera
         TRANSLATEX = racetrack[cars[1].cell].x
