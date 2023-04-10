@@ -46,6 +46,10 @@ Use left mouse button to select a gear.
 
 Use right moust button to select a cell in front of the race car.
 
+Use arrow keys to move the camera.   ( <- ^ -> v  )
+
+Use shift-arrow keys to move the camera faster,
+
 Roadmap
 =======
 
