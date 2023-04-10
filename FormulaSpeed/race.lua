@@ -650,6 +650,8 @@ function race.draw()
     drawy = drawy + 35
     love.graphics.print("Brake wear points: " .. cars[1].wpbrakes, drawx, drawy)
     drawy = drawy + 35
+    love.graphics.print("Gearbox wear points: " .. cars[1].wpgearbox, drawx, drawy)
+    drawy = drawy + 35
     love.graphics.print("Engine wear points: " .. cars[1].wpengine, drawx, drawy)
     drawy = drawy + 35
 
@@ -660,6 +662,7 @@ function race.draw()
     love.graphics.line(gearstick[5].x, gearstick[5].y, gearstick[6].x, gearstick[6].y)
     local drawy = gearstick[1].y - (gearstick[1].y - gearstick[2].y) / 2
     love.graphics.line(gearstick[1].x, drawy, gearstick[6].x, drawy)
+    -- draw the knobs
     for k, v in pairs(gearstick) do
         if cars[1].gear == k then           -- set the colour green if this gear is selected
             love.graphics.setColor(0,1,0,1)
@@ -667,6 +670,9 @@ function race.draw()
             love.graphics.setColor(1,1,1,1)
         end
         love.graphics.circle("fill", v.x, v.y, 10)
+        -- draw the number
+        love.graphics.setColor(0,0,0,1)
+        love.graphics.print(k, v.x - 4, v.y - 6)
     end
 
     -- draw the topbar (gearbox matrix)
