@@ -17,5 +17,10 @@ function enums.load()
     enum.gamemodeMoveCar = 2
     enum.gamemodeEdit = 3
 
+    enum.fontDefault = 1
+    enum.fontMedium = 2
+    enum.fontLarge = 3
+    enum.fontCorporate = 4
+
 end
 return enums

@@ -15,7 +15,10 @@ bitser = require 'lib.bitser'
 -- https://github.com/gvx/bitser
 
 nativefs = require 'lib.nativefs'
--- https://github.com/megagrump/nativefs
+-- https://github.com/togfoxy/Lovely-Toasts
+
+lovelyToasts = require 'lib.lovelyToasts'
+-- https://github.com/Loucee/Lovely-Toasts
 
 require 'lib.buttons'
 require 'enums'
@@ -85,7 +88,7 @@ function love.load()
 	enums.load()
 	constants.load()
 
-	-- fun.loadFonts()
+	fun.loadFonts()
     -- fun.loadAudio()
 	fun.loadImages()
 
@@ -102,6 +105,8 @@ function love.load()
     cf.addScreen(enum.sceneRace, SCREEN_STACK)
 
 	love.keyboard.setKeyRepeat(true)
+
+	lovelyToasts.options.tapToDismiss = true
 
 end
 
