@@ -1,4 +1,4 @@
-# FormulaSpeed
+# Formula Speed
 
 Select your gear, roll the dice, move your car, negotiate the corners - win!
 
