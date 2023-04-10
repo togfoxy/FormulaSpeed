@@ -35,7 +35,13 @@ The game presents a 'ghost' car if you play more than one game. The ghost reflec
 
 Play the track as many times as you like and beat your personal best time.
 
-
-
 DEV NOTES: the game does not end after the first lap (yet). Suggest you close the game and restart when you finish your first lap and try to beat your personal time.
+
+Controls
+========
+
+Use left mouse button to select a gear.
+
+Use right moust button to select a cell in front of the race car.
+
 
