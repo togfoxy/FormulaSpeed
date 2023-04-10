@@ -16,6 +16,7 @@ local GAME_MODE
 local EDIT_MODE = false                -- true/false
 
 local previouscell = nil                -- previous cell placed during link command
+local numberofturns = 0
 
 local function unselectAllCells()
     for k, v in pairs(racetrack) do
@@ -84,6 +85,36 @@ local function loadCars()
     cars[1].wphandling = 2
     cars[1].movesleft = 0
     cars[1].brakestaken = 0             -- how many times did car stop in current corner
+
+    -- gearbox
+    cars[1].gearbox = {}
+    cars[1].gearbox[1] = {1,1}
+    cars[1].gearbox[2] = {2,2}
+    cars[1].gearbox[3] = {3,3}
+    cars[1].gearbox[4] = {4,4}
+    cars[1].gearbox[5] = {5,5}
+    cars[1].gearbox[6] = {6,6}
+
+    -- randomise the gearbox. Example:
+    -- gearbox[3][1] = the lowest value for gearbox 3
+    -- gearbox[3][2] = the highest value for gearbox 3
+    cars[1].gearbox[1][1] = 1
+    cars[1].gearbox[1][2] = love.math.random(1, 3)
+
+    cars[1].gearbox[2][1] = 2
+    cars[1].gearbox[2][2] = love.math.random(1, 5)
+
+    cars[1].gearbox[3][1] = love.math.random(3, 5)
+    cars[1].gearbox[3][2] = love.math.random(7, 9)
+
+    cars[1].gearbox[4][1] = love.math.random(6, 8)
+    cars[1].gearbox[4][2] = love.math.random(11, 13)
+
+    cars[1].gearbox[5][1] = love.math.random(10, 12)
+    cars[1].gearbox[5][2] = love.math.random(19, 21)
+
+    cars[1].gearbox[6][1] = love.math.random(20, 22)
+    cars[1].gearbox[6][2] = love.math.random(29, 31)
 end
 
 local function loadGearStick()
@@ -272,6 +303,7 @@ function race.mousereleased(rx, ry, x, y, button)
                         -- if ending turn in corner then give credit for the braking
                         if cars[1].movesleft < 1 then
                             cars[1].movesleft = 0
+                            numberofturns = numberofturns + 1
                             if racetrack[cars[1].cell].isCorner then
                                 cars[1].brakestaken = cars[1].brakestaken + 1
                             end
@@ -484,6 +516,10 @@ function race.draw()
     drawy = 75
 
     love.graphics.setColor(1,1,1,1)
+
+    love.graphics.print("Turns: " .. numberofturns, drawx, drawy)
+    drawy = drawy + 35
+
     love.graphics.print("Cell #" .. cars[1].cell, drawx, drawy)
     drawy = drawy + 35
     -- draw the links for the current cell
@@ -517,6 +553,48 @@ function race.draw()
             love.graphics.setColor(1,1,1,1)
         end
         love.graphics.circle("fill", v.x, v.y, 10)
+    end
+
+    -- draw the topbar (gearbox)
+    local topbarheight = 100
+    love.graphics.setColor(0, 0, 0, 0.75)
+    love.graphics.rectangle("fill", 0, 0, SCREEN_WIDTH - sidebarwidth, topbarheight)
+
+    -- draw the gearbox
+    -- draw the speed along the top
+    local drawx = 100
+    local drawy = 50
+    love.graphics.setColor(1,1,1,1)
+    for i = 1, 40 do
+        love.graphics.print(i, drawx + 10, drawy)       -- the +10 centres the text
+        drawx = drawx + 30
+    end
+
+    -- draw the gears down the side
+    drawx = 50
+    drawy = 75
+    for i = 1, 6 do
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.print("Gear " .. i, drawx, drawy + 4)         -- the +4 centres the text
+        drawy = drawy + 25
+    end
+
+    -- now fill in the matrix
+    -- add white boxes everywhere
+
+    for i = 1, 6 do
+        for j = 1, 40 do
+            local drawx1 = 70 + (30 * j)
+            local drawy1 = 50 + (25 * i)
+            love.graphics.setColor(1,1,1,0.5)
+            love.graphics.rectangle("line", drawx1, drawy1, 30, 25)
+
+            -- now fill the cell if a gear can access this speed
+            if j >= cars[1].gearbox[i][1] and j <= cars[1].gearbox[i][2] then
+                love.graphics.setColor(0,1,0,0.75)
+                love.graphics.rectangle("fill", drawx1, drawy1, 30, 25)
+            end
+        end
     end
 
     -- edit mode
