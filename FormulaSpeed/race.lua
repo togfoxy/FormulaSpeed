@@ -34,6 +34,7 @@ local function addNewCell(x, y, pcell)
     thisCell.isSelected = true
     thisCell.isCorner = false
     thisCell.speedCheck = nil               -- Number. Used at the exit of corners to check for overshoot
+    thisCell.isFinish = nil
     thisCell.link = {}
     table.insert(racetrack, thisCell)
 
@@ -87,6 +88,7 @@ local function loadCars()
     cars[1].isEliminated = false
     cars[1].isSpun = false
     cars[1].overshootcount = 0              -- used for special rule when wptyres == 0
+    cars[1].finishcount = 1                 -- how many times is the finish line crossed. Need 2 to win a 1 lap race
 
     -- gearbox
     cars[1].gearbox = {}
@@ -179,7 +181,7 @@ local function checkForElimination(carindex)
         cars[carindex].isEliminated = true
     end
 
-
+    lovelyToasts.show("Your car is eliminated!", 15, "middle")
 end
 
 function race.keypressed( key, scancode, isrepeat )
@@ -279,10 +281,19 @@ function race.keyreleased(key, scancode)
                 end
             end
         end
+
+        if key == "f" then          -- finish line
+            local cell = getSelectedCell()
+            if cell ~= nil then
+                racetrack[cell].isFinish = not racetrack[cell].isFinish
+            end
+        end
     end
 end
 
 function race.mousereleased(rx, ry, x, y, button)
+
+    lovelyToasts.mousereleased(x, y, button)
 
     local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
 
@@ -309,23 +320,30 @@ function race.mousereleased(rx, ry, x, y, button)
                         -- a shift up/down or same gear is legit
                         cars[1].gear = desiredgear
                         addCarMoves(1)      -- car index
-                    elseif gearchange == -2 then -- a rapid shift down. Damage gearbox
-                        cars[1].wpgearbox = cars[1].wpgearbox - 1
-                        cars[1].gear = desiredgear
-                        addCarMoves(1)      -- car index
-                    elseif gearchange == -3 then -- a rapid shift down. Damage gearbox
-                        cars[1].wpgearbox = cars[1].wpgearbox - 1
-                        cars[1].wpbrakes = cars[1].wpbrakes - 1
-                        cars[1].gear = desiredgear
-                        addCarMoves(1)      -- car index
-                    elseif gearchange == -4 then -- a rapid shift down. Damage gearbox
-                        cars[1].wpgearbox = cars[1].wpgearbox - 1
-                        cars[1].wpbrakes = cars[1].wpbrakes - 1
-                        cars[1].wpengine = cars[1].wpengine - 1
-                        cars[1].gear = desiredgear
-                        addCarMoves(1)      -- car index
                     else
-                        -- illegal shift. Do nothing
+                        if cars[1].wpgearbox == 0 then
+                            -- gearbox damaged. Can only shift one gear. Ignore this click
+                            lovelyToasts.show("Gearbox damaged. Can only shift one gear", 10, "middle")
+                        else
+                            if gearchange == -2 then -- a rapid shift down. Damage gearbox
+                                cars[1].wpgearbox = cars[1].wpgearbox - 1
+                                cars[1].gear = desiredgear
+                                addCarMoves(1)      -- car index
+                            elseif gearchange == -3 then -- a rapid shift down. Damage gearbox
+                                cars[1].wpgearbox = cars[1].wpgearbox - 1
+                                cars[1].wpbrakes = cars[1].wpbrakes - 1
+                                cars[1].gear = desiredgear
+                                addCarMoves(1)      -- car index
+                            elseif gearchange == -4 then -- a rapid shift down. Damage gearbox
+                                cars[1].wpgearbox = cars[1].wpgearbox - 1
+                                cars[1].wpbrakes = cars[1].wpbrakes - 1
+                                cars[1].wpengine = cars[1].wpengine - 1
+                                cars[1].gear = desiredgear
+                                addCarMoves(1)      -- car index
+                            else
+                                -- illegal shift. Do nothing
+                            end
+                        end
                     end
                 end
             end
@@ -406,7 +424,17 @@ function race.mousereleased(rx, ry, x, y, button)
                             end
                             cars[1].brakestaken = 0     -- reset for next corner
                         end
+
                         checkForElimination(1)      -- carindex
+
+                        if racetrack[cars[1].cell].isFinish then
+                            cars[1].finishcount = cars[1].finishcount + 1
+                            if cars[1].finishcount > 1 then
+                                -- WIN!
+                                print("Lap time = " .. numberofturns)
+                                lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
+                            end
+                        end
                     end
                 else
                 end
@@ -528,7 +556,12 @@ function race.draw()
             else
                 love.graphics.setColor(1, 1, 1, 1)
             end
-            love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+
+            if v.isFinish then
+                love.graphics.draw(IMAGE[enum.imageCellFinish], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+            else
+                love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+            end
 
             -- draw the speed limit
             if v.speedCheck ~= nil then
@@ -537,14 +570,11 @@ function race.draw()
                 love.graphics.circle("line", v.x, v.y + 10, 12)
             end
 
-
             -- draw the selected cell over the normal cell
             if v.isSelected then
                 love.graphics.setColor(0, 1, 0, 1)
                 love.graphics.draw(IMAGE[enum.imageCellShaded], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
             end
-
-
         end
 
         -- draw the links
@@ -574,8 +604,16 @@ function race.draw()
             love.graphics.setColor(1,1,1,1)     -- white
         end
         love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
+        -- draw number of moves left
+        if cars[1].movesleft > 0 then
+            drawx, drawy = love.mouse.getPosition()
+            drawx, drawy = cam:toWorld(drawx, drawy)
+            love.graphics.setColor(1,1,1,1)     -- white
+            love.graphics.setFont(FONT[enum.fontCorporate])
+            love.graphics.print(cars[i].movesleft, drawx + 15, drawy - 5)
+            love.graphics.setFont(FONT[enum.fontDefault])
+        end
     end
-
     -- draw any mouse line things
     if EDIT_MODE then       -- note there is another EDIT_MODE after camera detach
         if love.mouse.isDown(2) then
@@ -595,6 +633,8 @@ function race.draw()
     end
 
     cam:detach()
+
+    lovelyToasts.draw()     -- should this be before detach?
 
     -- draw the sidebar
     local drawx = SCREEN_WIDTH - sidebarwidth
@@ -629,6 +669,8 @@ function race.draw()
     drawy = drawy + 35
     love.graphics.print("Brake wear points: " .. cars[1].wpbrakes, drawx, drawy)
     drawy = drawy + 35
+    love.graphics.print("Gearbox wear points: " .. cars[1].wpgearbox, drawx, drawy)
+    drawy = drawy + 35
     love.graphics.print("Engine wear points: " .. cars[1].wpengine, drawx, drawy)
     drawy = drawy + 35
 
@@ -639,6 +681,7 @@ function race.draw()
     love.graphics.line(gearstick[5].x, gearstick[5].y, gearstick[6].x, gearstick[6].y)
     local drawy = gearstick[1].y - (gearstick[1].y - gearstick[2].y) / 2
     love.graphics.line(gearstick[1].x, drawy, gearstick[6].x, drawy)
+    -- draw the knobs
     for k, v in pairs(gearstick) do
         if cars[1].gear == k then           -- set the colour green if this gear is selected
             love.graphics.setColor(0,1,0,1)
@@ -646,6 +689,9 @@ function race.draw()
             love.graphics.setColor(1,1,1,1)
         end
         love.graphics.circle("fill", v.x, v.y, 10)
+        -- draw the number
+        love.graphics.setColor(0,0,0,1)
+        love.graphics.print(k, v.x - 4, v.y - 6)
     end
 
     -- draw the topbar (gearbox matrix)
@@ -709,6 +755,8 @@ function race.update(dt)
         TRANSLATEY = racetrack[cars[1].cell].y
         cam:setPos(TRANSLATEX, TRANSLATEY)
     end
+
+    lovelyToasts.update(dt)
 
     cam:setZoom(ZOOMFACTOR)
     cam:setPos(TRANSLATEX,	TRANSLATEY)
