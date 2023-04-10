@@ -11,10 +11,14 @@ local sidebarwidth = 250
 
 local gearstick = {}            -- made this a table so I can do graphics stuff
 
+local ghost = {}                -- tracks the ghosts movements
+local history = {}              -- eg history[1][12] = cell 29     (car 1, turn 12, cell 29)
+
 local EDIT_MODE = false                -- true/false
 
 local previouscell = nil                -- previous cell placed during link command
 local numberofturns = 0
+local diceroll = nil                    -- this is the number of moves allocated when choosing a gear.
 
 local function unselectAllCells()
     for k, v in pairs(racetrack) do
@@ -41,6 +45,7 @@ local function addNewCell(x, y, pcell)
     if pcell ~= nil then
         -- link from previous cell to this cell
         racetrack[pcell].link[#racetrack] = true
+        racetrack[#racetrack].rotation = racetrack[pcell].rotation
         previouscell = nil
     else
         previouscell = #racetrack       -- global
@@ -73,6 +78,7 @@ local function loadCars()
 
     for i = 1, numofcars do
         cars[i] = {}
+        history[i] = {}         -- tracks the history for this race only
     end
 
     cars[1].cell = 1
@@ -88,7 +94,6 @@ local function loadCars()
     cars[1].isEliminated = false
     cars[1].isSpun = false
     cars[1].overshootcount = 0              -- used for special rule when wptyres == 0
-    cars[1].finishcount = 1                 -- how many times is the finish line crossed. Need 2 to win a 1 lap race
 
     -- gearbox
     cars[1].gearbox = {}
@@ -105,8 +110,9 @@ local function loadCars()
     cars[1].gearbox[1][1] = 1
     cars[1].gearbox[1][2] = love.math.random(1, 3)
 
-    cars[1].gearbox[2][1] = 2
+    cars[1].gearbox[2][1] = love.math.random(1, 3)
     cars[1].gearbox[2][2] = love.math.random(1, 5)
+    if cars[1].gearbox[2][2] < cars[1].gearbox[2][1] then cars[1].gearbox[2][2] = cars[1].gearbox[2][1] end
 
     cars[1].gearbox[3][1] = love.math.random(3, 5)
     cars[1].gearbox[3][2] = love.math.random(7, 9)
@@ -120,6 +126,8 @@ local function loadCars()
     cars[1].gearbox[6][1] = love.math.random(20, 22)
     cars[1].gearbox[6][2] = love.math.random(29, 31)
 
+    -- load the ghost history, if there is one
+    ghost = fileops.loadGhost()
 end
 
 local function loadGearStick()
@@ -161,7 +169,7 @@ local function getClosestCell(pointx, pointy)
         end
     end
 
-    if smallestdist <= 15 then
+    if smallestdist <= 30 then
         return smallestkey
     end
     return nil
@@ -172,7 +180,8 @@ local function addCarMoves(carindex)
     -- assign a random number of moves based on new gear
     local low = cars[carindex].gearbox[cars[carindex].gear][carindex]
     local high = cars[carindex].gearbox[cars[carindex].gear][2]
-    cars[carindex].movesleft = love.math.random(low, high)
+    diceroll = love.math.random(low, high)      -- capture this here and use it for the AI
+    cars[carindex].movesleft = diceroll
 end
 
 local function checkForElimination(carindex)
@@ -181,7 +190,9 @@ local function checkForElimination(carindex)
         cars[carindex].isEliminated = true
     end
 
-    lovelyToasts.show("Your car is eliminated!", 15, "middle")
+    if cars[carindex].isEliminated then
+        lovelyToasts.show("Your car is eliminated!", 15, "middle")
+    end
 end
 
 function race.keypressed( key, scancode, isrepeat )
@@ -310,7 +321,7 @@ function race.mousereleased(rx, ry, x, y, button)
                         smallestkey = k
                     end
                 end
-                if smallestdist <= 30 then
+                if smallestdist <= 40 then
                     -- smallestkey is the gear selected
                     local desiredgear = smallestkey
                     local currentgear = cars[1].gear
@@ -329,17 +340,20 @@ function race.mousereleased(rx, ry, x, y, button)
                                 cars[1].wpgearbox = cars[1].wpgearbox - 1
                                 cars[1].gear = desiredgear
                                 addCarMoves(1)      -- car index
+                                lovelyToasts.show("Gearbox point used", 15, "middle")
                             elseif gearchange == -3 then -- a rapid shift down. Damage gearbox
                                 cars[1].wpgearbox = cars[1].wpgearbox - 1
                                 cars[1].wpbrakes = cars[1].wpbrakes - 1
                                 cars[1].gear = desiredgear
                                 addCarMoves(1)      -- car index
+                                lovelyToasts.show("Gearbox and brake point used", 15, "middle")
                             elseif gearchange == -4 then -- a rapid shift down. Damage gearbox
                                 cars[1].wpgearbox = cars[1].wpgearbox - 1
                                 cars[1].wpbrakes = cars[1].wpbrakes - 1
                                 cars[1].wpengine = cars[1].wpengine - 1
                                 cars[1].gear = desiredgear
                                 addCarMoves(1)      -- car index
+                                lovelyToasts.show("Gearbox, brake and engine point used", 15, "middle")
                             else
                                 -- illegal shift. Do nothing
                             end
@@ -364,6 +378,10 @@ function race.mousereleased(rx, ry, x, y, button)
                         if cars[1].movesleft < 1 then
                             cars[1].movesleft = 0
                             numberofturns = numberofturns + 1
+
+                            -- add to history
+                            history[1][numberofturns] = cars[1].cell
+
                             if racetrack[cars[1].cell].isCorner then
                                 cars[1].brakestaken = cars[1].brakestaken + 1
                             end
@@ -374,7 +392,7 @@ function race.mousereleased(rx, ry, x, y, button)
                             local brakescore = racetrack[cars[1].cell].speedCheck - cars[1].brakestaken
                             if brakescore <= 0 then
                                 -- correct brakes taken. No problems
-                            else
+                            else        -- overshoot
                                 -- overshoot
                                 if brakescore >= 2 then
                                     -- elimination
@@ -387,14 +405,17 @@ function race.mousereleased(rx, ry, x, y, button)
                                         -- different set of rules
                                         if cars[1].wptyres > cars[1].movesleft then
                                             -- normal overshoot
+                                            lovelyToasts.show(cars[1].movesleft .. " tyre points used", 15, "middle")
                                             cars[1].wptyres = cars[1].wptyres - cars[1].movesleft
                                         elseif cars[1].wptyres == cars[1].movesleft then
                                             -- spin
                                             cars[1].wptyres = 0
                                             cars[1].isSpun = true
                                             cars[1].gear = 0
+                                            lovelyToasts.show("0 tyre points left. Car spun", 15, "middle")
                                         elseif cars[1].movesleft > cars[1].wptyres then
                                             -- crash out
+                                            print("Crashed. Overshoot is greater than tyre wear points")
                                             cars[1].isEliminated = true
                                             cars[1].isSpun = true
                                         end
@@ -407,11 +428,13 @@ function race.mousereleased(rx, ry, x, y, button)
 
                                             if cars[1].overshootcount > 2 then
                                                 -- crash out
+                                                print("Crashed. Overshoot > 2 while out of tyre wear points")
                                                 cars[1].isEliminated = true
                                                 cars[1].isSpun = true
                                             end
                                         elseif cars[1].movesleft > 1 then
                                             -- crash
+                                            print("Crashed. Overshoot > 1 while out of tyre wear points")
                                             cars[1].isEliminated = true
                                             cars[1].isSpun = true
                                         else
@@ -428,11 +451,15 @@ function race.mousereleased(rx, ry, x, y, button)
                         checkForElimination(1)      -- carindex
 
                         if racetrack[cars[1].cell].isFinish then
-                            cars[1].finishcount = cars[1].finishcount + 1
-                            if cars[1].finishcount > 1 then
+                            if numberofturns > 5 then          -- arbitrary value
                                 -- WIN!
                                 print("Lap time = " .. numberofturns)
                                 lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
+
+                                -- see if history should replace the ghost
+                                if ghost == nil or numberofturns < #ghost then
+                                    fileops.saveGhost(history[1])
+                                end
                             end
                         end
                     end
@@ -537,62 +564,6 @@ function race.draw()
     love.graphics.setColor(1,1,1,1)
     love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
 
-    -- draw the track
-    for k, v in pairs(racetrack) do
-        if v.x ~= nil then
-            -- draw the dots
-            love.graphics.setColor(1, 0, 1, 1)
-            love.graphics.circle("fill", v.x, v.y, 5)
-            -- draw the heading of the dot
-            local x2, y2 = cf.addVectorToPoint(v.x, v.y, math.deg(v.rotation) + 90, 15)
-            love.graphics.line(v.x, v.y, x2, y2)
-
-            -- draw the cell number
-            -- love.graphics.print(k, v.x + 6, v.y - 6)
-
-            -- draw the cell images
-            if v.isCorner then
-                love.graphics.setColor(1, 1, 0, 1)
-            else
-                love.graphics.setColor(1, 1, 1, 1)
-            end
-
-            if v.isFinish then
-                love.graphics.draw(IMAGE[enum.imageCellFinish], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
-            else
-                love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
-            end
-
-            -- draw the speed limit
-            if v.speedCheck ~= nil then
-                love.graphics.setColor(1,0,0,1)
-                love.graphics.print(v.speedCheck, v.x - 3, v.y + 3)
-                love.graphics.circle("line", v.x, v.y + 10, 12)
-            end
-
-            -- draw the selected cell over the normal cell
-            if v.isSelected then
-                love.graphics.setColor(0, 1, 0, 1)
-                love.graphics.draw(IMAGE[enum.imageCellShaded], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
-            end
-        end
-
-        -- draw the links
-        for q, w in pairs(v.link) do
-            if w == true then
-                if racetrack[q] == nil then
-                    -- this cell use to exist but now it's deleted
-                    w = false
-                else
-                    local x2 = racetrack[q].x
-                    local y2 = racetrack[q].y
-                    love.graphics.setColor(1, 0, 1, 0.5)
-                    love.graphics.line(v.x, v.y, x2, y2)
-                end
-            end
-        end
-    end
-
     -- draw the cars
     for i = 1, 1 do
         local drawx = racetrack[cars[i].cell].x
@@ -604,18 +575,90 @@ function race.draw()
             love.graphics.setColor(1,1,1,1)     -- white
         end
         love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
+
         -- draw number of moves left
         if cars[1].movesleft > 0 then
             drawx, drawy = love.mouse.getPosition()
             drawx, drawy = cam:toWorld(drawx, drawy)
             love.graphics.setColor(1,1,1,1)     -- white
             love.graphics.setFont(FONT[enum.fontCorporate])
-            love.graphics.print(cars[i].movesleft, drawx + 15, drawy - 5)
+            love.graphics.print(cars[i].movesleft, drawx + 20, drawy - 5)
             love.graphics.setFont(FONT[enum.fontDefault])
         end
     end
+
+    -- draw the ghost, if there is one
+    if ghost ~= nil then        -- will be nil if no ghost.dat file exists
+        if ghost[numberofturns] ~= nil then
+            local ghostcell = ghost[numberofturns]
+
+            local drawx = racetrack[ghostcell].x
+            local drawy = racetrack[ghostcell].y
+            love.graphics.setColor(1,1,1,0.5)
+            love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[ghostcell].rotation , 1, 1, 32, 15)
+        end
+    end
+
     -- draw any mouse line things
     if EDIT_MODE then       -- note there is another EDIT_MODE after camera detach
+
+        -- draw the track cells and links
+        for k, v in pairs(racetrack) do
+            if v.x ~= nil then
+                -- draw the dots
+                love.graphics.setColor(1, 0, 1, 1)
+                love.graphics.circle("fill", v.x, v.y, 5)
+                -- draw the heading of the dot
+                local x2, y2 = cf.addVectorToPoint(v.x, v.y, math.deg(v.rotation) + 90, 15)
+                love.graphics.line(v.x, v.y, x2, y2)
+
+                -- draw the cell number
+                -- love.graphics.print(k, v.x + 6, v.y - 6)
+
+                -- draw the cell images
+                if v.isCorner then
+                    love.graphics.setColor(1, 1, 0, 1)
+                else
+                    love.graphics.setColor(1, 1, 1, 1)
+                end
+
+                if v.isFinish then
+                    love.graphics.draw(IMAGE[enum.imageCellFinish], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+                else
+                    love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+                end
+
+                -- draw the speed limit
+                if v.speedCheck ~= nil then
+                    love.graphics.setColor(1,0,0,1)
+                    love.graphics.print(v.speedCheck, v.x - 3, v.y + 3)
+                    love.graphics.circle("line", v.x, v.y + 10, 12)
+                end
+
+                -- draw the selected cell over the normal cell
+                if v.isSelected then
+                    love.graphics.setColor(0, 1, 0, 1)
+                    love.graphics.draw(IMAGE[enum.imageCellShaded], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+                end
+            end
+
+            -- draw the links
+            for q, w in pairs(v.link) do
+                if w == true then
+                    if racetrack[q] == nil then
+                        -- this cell use to exist but now it's deleted
+                        w = false
+                    else
+                        local x2 = racetrack[q].x
+                        local y2 = racetrack[q].y
+                        love.graphics.setColor(1, 0, 1, 0.5)
+                        love.graphics.line(v.x, v.y, x2, y2)
+                    end
+                end
+            end
+        end
+
+
         if love.mouse.isDown(2) then
             local cell = getSelectedCell()
             if cell ~= nil then
@@ -648,16 +691,6 @@ function race.draw()
 
     love.graphics.print("Turns: " .. numberofturns, drawx, drawy)
     drawy = drawy + 35
-
-    love.graphics.print("Cell #" .. cars[1].cell, drawx, drawy)
-    drawy = drawy + 35
-    -- draw the links for the current cell
-    for k, v in pairs(racetrack[cars[1].cell].link) do
-        if v == true then
-            love.graphics.print("Links to " .. k, drawx, drawy)
-            drawy = drawy + 35
-        end
-    end
 
     love.graphics.print("Gear: " .. cars[1].gear, drawx, drawy)
     drawy = drawy + 35
@@ -694,44 +727,45 @@ function race.draw()
         love.graphics.print(k, v.x - 4, v.y - 6)
     end
 
-    -- draw the topbar (gearbox matrix)
-    local topbarheight = 225
-    love.graphics.setColor(0, 0, 0, 0.75)
-    love.graphics.rectangle("fill", 0, 0, SCREEN_WIDTH - sidebarwidth, topbarheight)
+    if not EDIT_MODE then
+        -- draw the topbar (gearbox matrix)
+        local topbarheight = 225
+        love.graphics.setColor(0, 0, 0, 0.75)
+        love.graphics.rectangle("fill", 0, 0, SCREEN_WIDTH - sidebarwidth, topbarheight)
 
-    -- draw the gearbox
-    -- draw the speed along the top
-    local drawx = 100
-    local drawy = 25
-    love.graphics.setColor(1,1,1,1)
-    for i = 1, 40 do
-        love.graphics.print(i, drawx + 10, drawy)       -- the +10 centres the text
-        drawx = drawx + 30
-    end
-
-    -- draw the gears down the side
-    drawx = 50
-    drawy = 50
-    for i = 1, 6 do
+        -- draw the gearbox
+        -- draw the speed along the top
+        local drawx = 100
+        local drawy = 25
         love.graphics.setColor(1,1,1,1)
-        love.graphics.print("Gear " .. i, drawx, drawy + 4)         -- the +4 centres the text
-        drawy = drawy + 25
-    end
+        for i = 1, 40 do
+            love.graphics.print(i, drawx + 10, drawy)       -- the +10 centres the text
+            drawx = drawx + 30
+        end
 
-    -- now fill in the matrix
-    -- add white boxes everywhere
+        -- draw the gears down the side
+        drawx = 50
+        drawy = 50
+        for i = 1, 6 do
+            love.graphics.setColor(1,1,1,1)
+            love.graphics.print("Gear " .. i, drawx, drawy + 4)         -- the +4 centres the text
+            drawy = drawy + 25
+        end
 
-    for i = 1, 6 do
-        for j = 1, 40 do
-            local drawx1 = 70 + (30 * j)
-            local drawy1 = 25 + (25 * i)
-            love.graphics.setColor(1,1,1,0.5)
-            love.graphics.rectangle("line", drawx1, drawy1, 30, 25)
+        -- now fill in the matrix
+        -- add white boxes everywhere
+        for i = 1, 6 do
+            for j = 1, 40 do
+                local drawx1 = 70 + (30 * j)
+                local drawy1 = 25 + (25 * i)
+                love.graphics.setColor(1,1,1,0.5)
+                love.graphics.rectangle("line", drawx1, drawy1, 30, 25)
 
-            -- now fill the cell if a gear can access this speed
-            if j >= cars[1].gearbox[i][1] and j <= cars[1].gearbox[i][2] then
-                love.graphics.setColor(0,1,0,0.75)
-                love.graphics.rectangle("fill", drawx1, drawy1, 30, 25)
+                -- now fill the cell if a gear can access this speed
+                if j >= cars[1].gearbox[i][1] and j <= cars[1].gearbox[i][2] then
+                    love.graphics.setColor(0,1,0,0.75)
+                    love.graphics.rectangle("fill", drawx1, drawy1, 30, 25)
+                end
             end
         end
     end
@@ -740,6 +774,19 @@ function race.draw()
     if EDIT_MODE then
         love.graphics.setColor(1,1,1,1)
         love.graphics.print("EDIT MODE", 50, 50)
+
+        local drawx = SCREEN_WIDTH - sidebarwidth + 10
+        local drawy = 355
+
+        love.graphics.print("Cell #" .. cars[1].cell, drawx, drawy)
+        drawy = drawy + 35
+        -- draw the links for the current cell
+        for k, v in pairs(racetrack[cars[1].cell].link) do
+            if v == true then
+                love.graphics.print("Links to " .. k, drawx, drawy)
+                drawy = drawy + 35
+            end
+        end
     end
 end
 
