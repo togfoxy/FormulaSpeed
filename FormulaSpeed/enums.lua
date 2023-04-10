@@ -11,6 +11,7 @@ function enums.load()
     enum.imageCar = 2
     enum.imageTrack = 3
     enum.imageCellShaded = 4
+    enum.imageCellFinish = 5
 
     enum.gamemodeGearSelect = 1
     enum.gamemodeMoveCar = 2

@@ -34,6 +34,7 @@ local function addNewCell(x, y, pcell)
     thisCell.isSelected = true
     thisCell.isCorner = false
     thisCell.speedCheck = nil               -- Number. Used at the exit of corners to check for overshoot
+    thisCell.isFinish = nil
     thisCell.link = {}
     table.insert(racetrack, thisCell)
 
@@ -87,6 +88,7 @@ local function loadCars()
     cars[1].isEliminated = false
     cars[1].isSpun = false
     cars[1].overshootcount = 0              -- used for special rule when wptyres == 0
+    cars[1].finishcount = 0                 -- how many times is the finish line crossed. Need 2 to win a 1 lap race
 
     -- gearbox
     cars[1].gearbox = {}
@@ -178,8 +180,6 @@ local function checkForElimination(carindex)
     if cars[carindex].wptyres < 0 then
         cars[carindex].isEliminated = true
     end
-
-
 end
 
 function race.keypressed( key, scancode, isrepeat )
@@ -277,6 +277,13 @@ function race.keyreleased(key, scancode)
                         racetrack[cell].speedCheck = nil
                     end
                 end
+            end
+        end
+
+        if key == "f" then          -- finish line
+            local cell = getSelectedCell()
+            if cell ~= nil then
+                racetrack[cell].isFinish = not racetrack[cell].isFinish
             end
         end
     end
@@ -406,7 +413,16 @@ function race.mousereleased(rx, ry, x, y, button)
                             end
                             cars[1].brakestaken = 0     -- reset for next corner
                         end
+
                         checkForElimination(1)      -- carindex
+
+                        if racetrack[cars[1].cell].isFinish then
+                            cars[1].finishcount = cars[1].finishcount + 1
+                            if cars[1].finishcount > 1 then
+                                -- WIN!
+                                print("Lap time = " .. numberofturns)
+                            end
+                        end
                     end
                 else
                 end
@@ -528,7 +544,12 @@ function race.draw()
             else
                 love.graphics.setColor(1, 1, 1, 1)
             end
-            love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+
+            if v.isFinish then
+                love.graphics.draw(IMAGE[enum.imageCellFinish], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+            else
+                love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+            end
 
             -- draw the speed limit
             if v.speedCheck ~= nil then
