@@ -37,6 +37,8 @@ Play the track as many times as you like and beat your personal best time.
 
 DEV NOTES: the game does not end after the first lap (yet). Suggest you close the game and restart when you finish your first lap and try to beat your personal time.
 
+DEV NOTES: the game lets you continute racing when you crash. Self-police and close the game when you crash.  ;)
+
 Controls
 ========
 
