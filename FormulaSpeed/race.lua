@@ -382,14 +382,6 @@ function race.mousereleased(rx, ry, x, y, button)
                         cars[1].cell = desiredcell
                         cars[1].movesleft = cars[1].movesleft - 1
 
-                        -- add move to the log file for this car
-                        -- happens every cell and is used for the bots AI. Different to history[] which is used for the ghost
-                        -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 moves left
-                        if cars[1].log[desiredcell] == nil then     -- at this point, desiredcell = cars[1].cell
-                            cars[1].log[desiredcell] = {}
-                        end
-                        cars[1].log[desiredcell].movesleft = cars[1].movesleft
-
                         -- if ending turn in corner then give credit for the braking
                         if cars[1].movesleft < 1 then
                             cars[1].movesleft = 0
@@ -398,13 +390,24 @@ function race.mousereleased(rx, ry, x, y, button)
                             -- add to history
                             history[1][numberofturns] = cars[1].cell
 
+                            -- add move to the log file for this car
+                            -- happens end of every move and is used for the bots AI. Different to history[] which is used for the ghost
+                            -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 moves left
+                            if cars[1].log[desiredcell] == nil then     -- at this point, desiredcell = cars[1].cell
+                                cars[1].log[desiredcell] = {}
+                            end
+                            cars[1].log[desiredcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
+
+                            -- give credit for braking in corner
                             if racetrack[cars[1].cell].isCorner then
                                 cars[1].brakestaken = cars[1].brakestaken + 1
                             end
 
-                            if trackknowledge[cars[1].cell] ~= nil then
-                                if trackknowledge[cars[1].cell].movesleft ~= nil and trackknowledge[cars[1].cell].movesleft ~= 0 then
-                                    print("Bot AI suggested speed = " .. trackknowledge[cars[1].cell].movesleft)
+                            if trackknowledge ~= nil then
+                                if trackknowledge[cars[1].cell] ~= nil then
+                                    if trackknowledge[cars[1].cell].moves ~= nil and trackknowledge[cars[1].cell].moves ~= 0 then
+                                        print("Bot AI suggested speed = " .. trackknowledge[cars[1].cell].moves)
+                                    end
                                 end
                             end
                         end
@@ -486,17 +489,17 @@ function race.mousereleased(rx, ry, x, y, button)
                                 -- update the bot AI
                                 -- use the cars log to update the bots knowledge of the race track
 								-- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
-					            --          trackknowledge[23].movesleft = the speed of the car that achieved the best time (see above)
+					            --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
 								-- these two things gives the bot AI something to strive for when selecting gears
 								for k, v in pairs(cars[1].log) do
                                     if trackknowledge == nil then trackknowledge = {} end
                                     if trackknowledge[k] == nil then trackknowledge[k] = {} end
 									if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
-                                        if v.movesleft > 0 then -- 0 is a legit value but offers no value to an AI
+                                        if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
     										-- this log has a faster time than previously recorded
     										-- update track knowledge with this new information
     										trackknowledge[k].besttime = numberofturns
-    										trackknowledge[k].movesleft = v.movesleft
+    										trackknowledge[k].moves = v.moves
                                         end
 									end
 								end
