@@ -48,7 +48,9 @@ Use right moust button to select a cell in front of the race car.
 
 Use arrow keys to move the camera.   ( <- ^ -> v  )
 
-Use shift-arrow keys to move the camera faster,
+Use shift-arrow keys to move the camera faster.
+
+Uaw mouse-wheel to zomom in and out.
 
 Roadmap
 =======
