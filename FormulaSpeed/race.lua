@@ -519,8 +519,6 @@ function race.mousereleased(rx, ry, x, y, button)
             local cell1 = getSelectedCell()
             local cell2 = getClosestCell(camx, camy)
 
-            print(cell1, cell2)
-
             if cell1 ~= nil and cell2 ~= nil then
                 -- link cell1 to cell2
                 racetrack[cell1].link[cell2] = not racetrack[cell1].link[cell2]
