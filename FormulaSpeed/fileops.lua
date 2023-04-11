@@ -28,6 +28,19 @@ function fileops.loadGhost()
 	    thistable = bitser.loads(contents)
         return thistable
     else
+        print("Failed to load ghost.")
+        return nil
+    end
+end
+
+function fileops.loadTrackKnowledge()
+    local thistable = {}
+    local savefile = savedir .. "knowledge.dat"
+	if nativefs.getInfo(savefile) then
+		contents, size = nativefs.read(savefile)
+	    thistable = bitser.loads(contents)
+        return thistable
+    else
         return nil
     end
 end
@@ -42,6 +55,13 @@ end
 function fileops.saveGhost(history)
     local savefile = savedir .. "ghost.dat"
     local serialisedString = bitser.dumps(history)
+    local success, message = nativefs.write(savefile, serialisedString)
+    return success
+end
+
+function fileops.saveTrackKnowledge(knowledge)
+    local savefile = savedir .. "knowledge.dat"
+    local serialisedString = bitser.dumps(knowledge)
     local success, message = nativefs.write(savefile, serialisedString)
     return success
 end

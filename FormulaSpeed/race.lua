@@ -70,7 +70,15 @@ local function loadRaceTrack()
         addNewCell(100,100, nil)
         print("No track found. Providing starting cell.")
     else
-        print("Track loaded")
+        print("Track loaded.")
+    end
+
+    trackknowledge = {}
+    trackknowledge = fileops.loadTrackKnowledge()
+    if trackknowledge == nil then
+        print("No track knowledge found.")
+    else
+        print("Track knowledge loaded.")
     end
 end
 
@@ -94,35 +102,35 @@ local function loadCars()
     cars[1].isEliminated = false
     cars[1].isSpun = false
     cars[1].overshootcount = 0              -- used for special rule when wptyres == 0
+    cars[1].log = {}
 
     -- gearbox
-    cars[1].gearbox = {}
-    cars[1].gearbox[1] = {1,1}
-    cars[1].gearbox[2] = {2,2}
-    cars[1].gearbox[3] = {3,3}
-    cars[1].gearbox[4] = {4,4}
-    cars[1].gearbox[5] = {5,5}
-    cars[1].gearbox[6] = {6,6}
-
     -- randomise the gearbox. Example:
     -- gearbox[3][1] = the lowest value for gearbox 3
     -- gearbox[3][2] = the highest value for gearbox 3
+    cars[1].gearbox = {}
+    cars[1].gearbox[1] = {}
     cars[1].gearbox[1][1] = 1
     cars[1].gearbox[1][2] = love.math.random(1, 3)
 
+    cars[1].gearbox[2] = {}
     cars[1].gearbox[2][1] = love.math.random(1, 3)
     cars[1].gearbox[2][2] = love.math.random(1, 5)
     if cars[1].gearbox[2][2] < cars[1].gearbox[2][1] then cars[1].gearbox[2][2] = cars[1].gearbox[2][1] end
 
+    cars[1].gearbox[3] = {}
     cars[1].gearbox[3][1] = love.math.random(3, 5)
     cars[1].gearbox[3][2] = love.math.random(7, 9)
 
+    cars[1].gearbox[4] = {}
     cars[1].gearbox[4][1] = love.math.random(6, 8)
     cars[1].gearbox[4][2] = love.math.random(11, 13)
 
+    cars[1].gearbox[5] = {}
     cars[1].gearbox[5][1] = love.math.random(10, 12)
     cars[1].gearbox[5][2] = love.math.random(19, 21)
 
+    cars[1].gearbox[6] = {}
     cars[1].gearbox[6][1] = love.math.random(20, 22)
     cars[1].gearbox[6][2] = love.math.random(29, 31)
 
@@ -374,6 +382,14 @@ function race.mousereleased(rx, ry, x, y, button)
                         cars[1].cell = desiredcell
                         cars[1].movesleft = cars[1].movesleft - 1
 
+                        -- add move to the log file for this car
+                        -- happens every cell and is used for the bots AI. Different to history[] which is used for the ghost
+                        -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 moves left
+                        if cars[1].log[desiredcell] == nil then     -- at this point, desiredcell = cars[1].cell
+                            cars[1].log[desiredcell] = {}
+                        end
+                        cars[1].log[desiredcell].movesleft = cars[1].movesleft
+
                         -- if ending turn in corner then give credit for the braking
                         if cars[1].movesleft < 1 then
                             cars[1].movesleft = 0
@@ -384,6 +400,12 @@ function race.mousereleased(rx, ry, x, y, button)
 
                             if racetrack[cars[1].cell].isCorner then
                                 cars[1].brakestaken = cars[1].brakestaken + 1
+                            end
+
+                            if trackknowledge[cars[1].cell] ~= nil then
+                                if trackknowledge[cars[1].cell].movesleft ~= nil and trackknowledge[cars[1].cell].movesleft ~= 0 then
+                                    print("Bot AI suggested speed = " .. trackknowledge[cars[1].cell].movesleft)
+                                end
                             end
                         end
 
@@ -460,6 +482,27 @@ function race.mousereleased(rx, ry, x, y, button)
                                 if ghost == nil or numberofturns < #ghost then
                                     fileops.saveGhost(history[1])
                                 end
+
+                                -- update the bot AI
+                                -- use the cars log to update the bots knowledge of the race track
+								-- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
+					            --          trackknowledge[23].movesleft = the speed of the car that achieved the best time (see above)
+								-- these two things gives the bot AI something to strive for when selecting gears
+								for k, v in pairs(cars[1].log) do
+                                    if trackknowledge == nil then trackknowledge = {} end
+                                    if trackknowledge[k] == nil then trackknowledge[k] = {} end
+									if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
+                                        if v.movesleft > 0 then -- 0 is a legit value but offers no value to an AI
+    										-- this log has a faster time than previously recorded
+    										-- update track knowledge with this new information
+    										trackknowledge[k].besttime = numberofturns
+    										trackknowledge[k].movesleft = v.movesleft
+                                        end
+									end
+								end
+                                local success = fileops.saveTrackKnowledge(trackknowledge)
+                                print("Knowledge save success: " .. tostring(success))
+                                print(inspect(trackknowledge))
                             end
                         end
                     end
