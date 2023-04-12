@@ -594,7 +594,7 @@ function race.mousemoved(x, y, dx, dy, istouch)
         TRANSLATEX = TRANSLATEX - dx
         TRANSLATEY = TRANSLATEY - dy
     end
-    
+
     if EDIT_MODE then
         if love.mouse.isDown(1) then
             local cell = getSelectedCell()
@@ -625,16 +625,22 @@ function race.draw()
             love.graphics.setColor(1,1,1,1)     -- white
         end
         love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
+    end
 
-        -- draw number of moves left
-        if cars[1].movesleft > 0 then
-            drawx, drawy = love.mouse.getPosition()
-            drawx, drawy = cam:toWorld(drawx, drawy)
-            love.graphics.setColor(1,1,1,1)     -- white
-            love.graphics.setFont(FONT[enum.fontCorporate])
-            love.graphics.print(cars[i].movesleft, drawx + 20, drawy - 5)
-            love.graphics.setFont(FONT[enum.fontDefault])
+    -- draw number of moves left beside the mouse
+    if cars[1].movesleft > 0 then
+        drawx, drawy = love.mouse.getPosition()
+        drawx, drawy = cam:toWorld(drawx, drawy)
+
+        if racetrack[cars[1].cell].isCorner then
+            -- the cell doesn't contain any knowledge about the speedcheck value so can't change mouse counter colours or any other
+            -- feedback. Might need to build speedcheck into the cell - but how to do with editor?
         end
+
+        love.graphics.setColor(1,1,1,1)     -- white
+        love.graphics.setFont(FONT[enum.fontCorporate])
+        love.graphics.print(cars[1].movesleft, drawx + 20, drawy - 5)
+        love.graphics.setFont(FONT[enum.fontDefault])
     end
 
     -- draw the ghost, if there is one
@@ -772,7 +778,7 @@ function race.draw()
             love.graphics.setColor(1,1,1,1)
         end
         love.graphics.circle("fill", v.x, v.y, 10)
-        -- draw the number
+        -- draw the numbers on the knobs
         love.graphics.setColor(0,0,0,1)
         love.graphics.print(k, v.x - 4, v.y - 6)
     end
@@ -793,7 +799,7 @@ function race.draw()
             drawx = drawx + 30
         end
 
-        -- draw the gears down the side
+        -- draw the gears down the side of the matrix
         drawx = 50
         drawy = 50
         for i = 1, 6 do
