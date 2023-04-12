@@ -589,6 +589,12 @@ end
 
 function race.mousemoved(x, y, dx, dy, istouch)
     local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
+
+    if love.mouse.isDown(3) then
+        TRANSLATEX = TRANSLATEX - dx
+        TRANSLATEY = TRANSLATEY - dy
+    end
+    
     if EDIT_MODE then
         if love.mouse.isDown(1) then
             local cell = getSelectedCell()
