@@ -21,6 +21,12 @@ local numberofturns = 0
 local diceroll = nil                    -- this is the number of moves allocated when choosing a gear.
 local currentplayer = 1                 -- value from 1 -> numofcars
 
+local function incCurrentPlayer()
+    -- operates on global. Returns nothing.
+    currentplayer = currentplayer + 1
+    if currentplayer > numofcars then currentplayer = 1 end
+end
+
 local function unselectAllCells()
     for k, v in pairs(racetrack) do
         v.isSelected = false
@@ -267,6 +273,21 @@ local function checkForElimination(carindex)
     elseif cars[carindex].isEliminated then
         lovelyToasts.show("Car #" .. carindex .. " is eliminated!", 15, "middle")
     end
+end
+
+local function botSelectGear()
+    return 1    --!
+end
+
+local function botMoves(butnumber)
+
+
+end
+
+local function moveBots()
+    local botgear = botSelectGear(currentplayer)
+    botMoves(currentplayer)
+    incCurrentPlayer()
 end
 
 local function drawGearStick(currentgear)
@@ -646,8 +667,7 @@ function race.mousereleased(rx, ry, x, y, button)
                             end
 
                             if cars[1].movesleft < 1 then
-                                currentplayer = currentplayer + 1
-                                if currentplayer > numofcars then currentplayer = 1 end
+                                incCurrentPlayer()
                             end
                         end
                     else
@@ -956,6 +976,10 @@ function race.update(dt)
         TRANSLATEX = racetrack[cars[1].cell].x
         TRANSLATEY = racetrack[cars[1].cell].y
         cam:setPos(TRANSLATEX, TRANSLATEY)
+    end
+
+    if currentplayer > 1 then
+        moveBots()
     end
 
     lovelyToasts.update(dt)
