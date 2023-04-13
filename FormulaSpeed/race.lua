@@ -95,6 +95,7 @@ local function findClearPath(stack, fromcell, movesleft)
 	-- local stack = {}
 	local currentcell = fromcell
 	local stepsneeded = movesleft
+    print("Car looking " .. movesleft .. " moves ahead")
 	for k, v in pairs(racetrack[currentcell].link) do
         local nextrandomcell = k		-- k is the cell number of the link
 		if isCellClear(nextrandomcell) then
@@ -110,6 +111,7 @@ local function findClearPath(stack, fromcell, movesleft)
             end
         end
     end
+    print("I think car is blocked and all links exhausted. Maybe?")     --!
     return stack
 end
 
@@ -266,6 +268,10 @@ local function addCarMoves(carindex)
     local high = cars[carindex].gearbox[currentgear][2]
     diceroll = love.math.random(low, high)      -- capture this here and use it for the AI
     cars[carindex].movesleft = diceroll
+
+    if carindex > 1 then
+        print("Dice roll for car #" .. carindex .. " is " .. diceroll)
+    end
 end
 
 local function checkForElimination(carindex)
