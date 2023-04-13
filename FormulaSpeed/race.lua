@@ -2,7 +2,7 @@ race = {}
 
 local racetrack = {}          -- the network of cells
 local cars = {}               -- a table of cars
-local numofcars = 1
+local numofcars = 2
 
 local celllength = 128
 local cellwidth = 64
@@ -19,6 +19,7 @@ local EDIT_MODE = false                -- true/false
 local previouscell = nil                -- previous cell placed during link command
 local numberofturns = 0
 local diceroll = nil                    -- this is the number of moves allocated when choosing a gear.
+local currentplayer = 1                 -- value from 1 -> numofcars
 
 local function unselectAllCells()
     for k, v in pairs(racetrack) do
@@ -54,6 +55,7 @@ local function addNewCell(x, y, pcell)
 end
 
 local function getSelectedCell()
+    -- retuns a number or nil
     for k, v in pairs(racetrack) do
         if v.isSelected then
             return k
@@ -118,7 +120,6 @@ local function loadRaceTrack()
     end
 
     -- ## testing
-    local path = {}
     -- local path = findClearPath(path, 1, 8)
     -- print("Path:")
     -- print(inspect(path))
@@ -131,7 +132,22 @@ local function loadCars()
         cars[i] = {}
         history[i] = {}         -- tracks the history for this race only
 
-        cars[i].cell = 1
+        if i == 1 then
+            cars[i].cell = 1
+        elseif i == 2 then
+            cars[i].cell = 435
+        elseif i == 3 then
+            cars[i].cell = 162
+        elseif i == 4 then
+            cars[i].cell = 432
+        elseif i == 5 then
+            cars[i].cell = 159
+        elseif i == 6 then
+            cars[i].cell = 429
+        else
+            error("Too many cars loaded.", 148)
+        end
+
         cars[i].gear = 0
         cars[i].wptyres = 6
         cars[i].wpbrakes = 3
@@ -182,6 +198,8 @@ local function loadCars()
 end
 
 local function loadGearStick()
+    -- the gear stick knobs are a table that needs to be loaded.
+    -- making it a table of x/y makes mouse detection easier
     gearstick[1] = {}
     gearstick[1].x = SCREEN_WIDTH - sidebarwidth + 50
     gearstick[1].y = SCREEN_HEIGHT - 100
@@ -241,8 +259,80 @@ local function checkForElimination(carindex)
         cars[carindex].isEliminated = true
     end
 
-    if cars[carindex].isEliminated then
-        lovelyToasts.show("Your car is eliminated!", 15, "middle")
+    --! check brakes and body etc etc
+
+    if cars[1].isEliminated then
+        -- player dead
+        lovelyToasts.show("Your car has crashed and is eliminated!", 15, "middle")
+    elseif cars[carindex].isEliminated then
+        lovelyToasts.show("Car #" .. carindex .. " is eliminated!", 15, "middle")
+    end
+end
+
+local function drawGearStick(currentgear)
+    -- draw gear stick in bottom right corner
+    -- draw the lines on the gear stick first
+    love.graphics.line(gearstick[1].x, gearstick[1].y, gearstick[2].x, gearstick[2].y)
+    love.graphics.line(gearstick[3].x, gearstick[3].y, gearstick[4].x, gearstick[4].y)
+    love.graphics.line(gearstick[5].x, gearstick[5].y, gearstick[6].x, gearstick[6].y)
+    local drawy = gearstick[1].y - (gearstick[1].y - gearstick[2].y) / 2
+    love.graphics.line(gearstick[1].x, drawy, gearstick[6].x, drawy)
+    -- draw the knobs
+    for k, v in pairs(gearstick) do
+        if currentgear == k then           -- set the colour green if this gear is selected
+            love.graphics.setColor(0,1,0,1)
+        else
+            love.graphics.setColor(1,1,1,1)
+        end
+        love.graphics.circle("fill", v.x, v.y, 10)
+        -- draw the numbers on the knobs
+        love.graphics.setColor(0,0,0,1)
+        love.graphics.print(k, v.x - 4, v.y - 6)
+    end
+end
+
+local function drawGearboxMatrix()
+    -- draw the matrix along the top bar
+    -- !! uses global cars[1] for now
+
+    local topbarheight = 225
+    love.graphics.setColor(0, 0, 0, 0.75)
+    love.graphics.rectangle("fill", 0, 0, SCREEN_WIDTH - sidebarwidth, topbarheight)
+
+    -- draw the gearbox matrix
+    -- draw the speed along the top
+    local drawx = 100
+    local drawy = 25
+    love.graphics.setColor(1,1,1,1)
+    for i = 1, 40 do            -- 40 is the max dice roll
+        love.graphics.print(i, drawx + 10, drawy)       -- the +10 centres the text
+        drawx = drawx + 30
+    end
+
+    -- draw the gears down the side of the matrix
+    drawx = 50
+    drawy = 50
+    for i = 1, 6 do
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.print("Gear " .. i, drawx, drawy + 4)         -- the +4 centres the text
+        drawy = drawy + 25
+    end
+
+    -- now fill in the matrix
+    -- add white boxes everywhere
+    for i = 1, 6 do     -- this is not cars - its gears
+        for j = 1, 40 do
+            local drawx1 = 70 + (30 * j)
+            local drawy1 = 25 + (25 * i)
+            love.graphics.setColor(1,1,1,0.5)
+            love.graphics.rectangle("line", drawx1, drawy1, 30, 25)
+
+            -- now fill the cell if a gear can access this speed
+            if j >= cars[1].gearbox[i][1] and j <= cars[1].gearbox[i][2] then
+                love.graphics.setColor(0,1,0,0.75)
+                love.graphics.rectangle("fill", drawx1, drawy1, 30, 25)
+            end
+        end
     end
 end
 
@@ -360,203 +450,213 @@ function race.mousereleased(rx, ry, x, y, button)
     local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
 
     if EDIT_MODE == false then
-        if button == 1 then
-            -- see if a gear is selected
-            if cars[1].movesleft == 0 then
-                local smallestdist = 999999
-                local smallestkey = nil
-                for k, v in pairs(gearstick) do
-                    local dist = cf.getDistance(rx, ry, v.x, v.y)
-                    if dist > 0 and dist < smallestdist then
-                        smallestdist = dist
-                        smallestkey = k
+        if currentplayer == 1 then
+            if button == 1 then
+                -- see if a gear is selected
+                if cars[1].movesleft == 0 then
+                    local smallestdist = 999999
+                    local smallestkey = nil
+                    for k, v in pairs(gearstick) do
+                        local dist = cf.getDistance(rx, ry, v.x, v.y)
+                        if dist > 0 and dist < smallestdist then
+                            smallestdist = dist
+                            smallestkey = k
+                        end
                     end
-                end
-                if smallestdist <= 40 then
-                    -- smallestkey is the gear selected
-                    local desiredgear = smallestkey
-                    local currentgear = cars[1].gear
-                    local gearchange = desiredgear - currentgear
+                    if smallestdist <= 40 then
+                        -- smallestkey is the gear selected
+                        local desiredgear = smallestkey
+                        local currentgear = cars[1].gear
+                        local gearchange = desiredgear - currentgear
 
-                    if gearchange >= -1 and gearchange <= 1 then
-                        -- a shift up/down or same gear is legit
-                        cars[1].gear = desiredgear
-                        addCarMoves(1)      -- car index
-                    else
-                        if cars[1].wpgearbox == 0 then
-                            -- gearbox damaged. Can only shift one gear. Ignore this click
-                            lovelyToasts.show("Gearbox damaged. Can only shift one gear", 10, "middle")
+                        if gearchange >= -1 and gearchange <= 1 then
+                            -- a shift up/down or same gear is legit
+                            cars[1].gear = desiredgear
+                            addCarMoves(1)      -- car index
                         else
-                            if gearchange == -2 then -- a rapid shift down. Damage gearbox
-                                cars[1].wpgearbox = cars[1].wpgearbox - 1
-                                cars[1].gear = desiredgear
-                                addCarMoves(1)      -- car index
-                                lovelyToasts.show("Gearbox point used", 15, "middle")
-                            elseif gearchange == -3 then -- a rapid shift down. Damage gearbox
-                                cars[1].wpgearbox = cars[1].wpgearbox - 1
-                                cars[1].wpbrakes = cars[1].wpbrakes - 1
-                                cars[1].gear = desiredgear
-                                addCarMoves(1)      -- car index
-                                lovelyToasts.show("Gearbox and brake point used", 15, "middle")
-                            elseif gearchange == -4 then -- a rapid shift down. Damage gearbox
-                                cars[1].wpgearbox = cars[1].wpgearbox - 1
-                                cars[1].wpbrakes = cars[1].wpbrakes - 1
-                                cars[1].wpengine = cars[1].wpengine - 1
-                                cars[1].gear = desiredgear
-                                addCarMoves(1)      -- car index
-                                lovelyToasts.show("Gearbox, brake and engine point used", 15, "middle")
+                            if cars[1].wpgearbox == 0 then
+                                -- gearbox damaged. Can only shift one gear. Ignore this click
+                                lovelyToasts.show("Gearbox damaged. Can only shift one gear", 10, "middle")
                             else
-                                -- illegal shift. Do nothing
+                                if gearchange == -2 then -- a rapid shift down. Damage gearbox
+                                    cars[1].wpgearbox = cars[1].wpgearbox - 1
+                                    cars[1].gear = desiredgear
+                                    addCarMoves(1)      -- car index
+                                    lovelyToasts.show("Gearbox point used", 15, "middle")
+                                elseif gearchange == -3 then -- a rapid shift down. Damage gearbox
+                                    cars[1].wpgearbox = cars[1].wpgearbox - 1
+                                    cars[1].wpbrakes = cars[1].wpbrakes - 1
+                                    cars[1].gear = desiredgear
+                                    addCarMoves(1)      -- car index
+                                    lovelyToasts.show("Gearbox and brake point used", 15, "middle")
+                                elseif gearchange == -4 then -- a rapid shift down. Damage gearbox
+                                    cars[1].wpgearbox = cars[1].wpgearbox - 1
+                                    cars[1].wpbrakes = cars[1].wpbrakes - 1
+                                    cars[1].wpengine = cars[1].wpengine - 1
+                                    cars[1].gear = desiredgear
+                                    addCarMoves(1)      -- car index
+                                    lovelyToasts.show("Gearbox, brake and engine point used", 15, "middle")
+                                else
+                                    -- illegal shift. Do nothing
+                                end
                             end
                         end
                     end
                 end
             end
-        end
-        if button == 2 then
-            -- try to move the car to the selected cell if linked
-            if cars[1].movesleft > 0 then
-                local currentcell = cars[1].cell
-                local desiredcell = getSelectedCell()
+            if button == 2 then
+                -- try to move the car to the selected cell if linked
+                if cars[1].movesleft > 0 then
+                    local currentcell = cars[1].cell
+                    local desiredcell = getSelectedCell()
 
-                if desiredcell ~= nil then
-                    if racetrack[currentcell].link[desiredcell] == true then
-                        -- move is legal
-                        cars[1].cell = desiredcell
-                        cars[1].movesleft = cars[1].movesleft - 1
+                    if desiredcell ~= nil then
+                        if racetrack[currentcell].link[desiredcell] == true then
+                            -- move is legal
+                            cars[1].cell = desiredcell
+                            cars[1].movesleft = cars[1].movesleft - 1
 
-                        -- if ending turn in corner then give credit for the braking
-                        if cars[1].movesleft < 1 then
-                            cars[1].movesleft = 0
-                            numberofturns = numberofturns + 1
+                            -- if ending turn in corner then give credit for the braking
+                            if cars[1].movesleft < 1 then
+                                -- end of turn
+                                cars[1].movesleft = 0
+                                numberofturns = numberofturns + 1
 
-                            -- add to history
-                            history[1][numberofturns] = cars[1].cell
+                                -- add to history
+                                history[1][numberofturns] = cars[1].cell
 
-                            -- add move to the log file for this car
-                            -- happens end of every move and is used for the bots AI. Different to history[] which is used for the ghost
-                            -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 moves left
-                            if cars[1].log[desiredcell] == nil then     -- at this point, desiredcell = cars[1].cell
-                                cars[1].log[desiredcell] = {}
-                            end
-                            cars[1].log[desiredcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
+                                -- add move to the log file for this car
+                                -- happens end of every move and is used for the bots AI. Different to history[] which is used for the ghost
+                                -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 moves left
+                                if cars[1].log[desiredcell] == nil then     -- at this point, desiredcell = cars[1].cell
+                                    cars[1].log[desiredcell] = {}
+                                end
+                                cars[1].log[desiredcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
 
-                            -- give credit for braking in corner
-                            if racetrack[cars[1].cell].isCorner then
-                                cars[1].brakestaken = cars[1].brakestaken + 1
-                            end
+                                -- give credit for braking in corner
+                                if racetrack[cars[1].cell].isCorner then
+                                    cars[1].brakestaken = cars[1].brakestaken + 1
+                                end
 
-                            if trackknowledge ~= nil then
-                                if trackknowledge[cars[1].cell] ~= nil then
-                                    if trackknowledge[cars[1].cell].moves ~= nil and trackknowledge[cars[1].cell].moves ~= 0 then
-                                        print("Bot AI suggested speed = " .. trackknowledge[cars[1].cell].moves)
+                                if trackknowledge ~= nil then
+                                    if trackknowledge[cars[1].cell] ~= nil then
+                                        if trackknowledge[cars[1].cell].moves ~= nil and trackknowledge[cars[1].cell].moves ~= 0 then
+                                            print("Bot AI suggested speed = " .. trackknowledge[cars[1].cell].moves)
+                                        end
                                     end
                                 end
                             end
-                        end
 
-                        -- if leaving corner, see if correct number of stops made
-                        if racetrack[cars[1].cell].speedCheck ~= nil then
-                            local brakescore = racetrack[cars[1].cell].speedCheck - cars[1].brakestaken
-                            if brakescore <= 0 then
-                                -- correct brakes taken. No problems
-                            else        -- overshoot
-                                -- overshoot
-                                if brakescore >= 2 then
-                                    -- elimination
-                                    print("Crashed out")
-                                    cars[1].isEliminated = true
-                                else
-                                    -- see how many cells was overshot
-                                    -- some complex rules about spinning etc
-                                    if cars[1].wptyres > 0 then
-                                        -- different set of rules
-                                        if cars[1].wptyres > cars[1].movesleft then
-                                            -- normal overshoot
-                                            lovelyToasts.show(cars[1].movesleft .. " tyre points used", 15, "middle")
-                                            cars[1].wptyres = cars[1].wptyres - cars[1].movesleft
-                                        elseif cars[1].wptyres == cars[1].movesleft then
-                                            -- spin
-                                            cars[1].wptyres = 0
-                                            cars[1].isSpun = true
-                                            cars[1].gear = 0
-                                            lovelyToasts.show("0 tyre points left. Car spun", 15, "middle")
-                                        elseif cars[1].movesleft > cars[1].wptyres then
-                                            -- crash out
-                                            print("Crashed. Overshoot is greater than tyre wear points")
-                                            cars[1].isEliminated = true
-                                            cars[1].isSpun = true
-                                        end
-                                    elseif cars[1].wptyres == 0 then
-                                        -- special rules when wptyres == 0
-                                        if cars[1].movesleft == 1 then  -- oveshoot on zero tyres has an odd rule
-                                            cars[1].overshootcount = cars[1].overshootcount + 1
-                                            casr[1].isSpun = true
-                                            cars[1].gear = 0
-
-                                            if cars[1].overshootcount > 2 then
+                            -- if leaving corner, see if correct number of stops made
+                            if racetrack[cars[1].cell].speedCheck ~= nil then
+                                local brakescore = racetrack[cars[1].cell].speedCheck - cars[1].brakestaken
+                                if brakescore <= 0 then
+                                    -- correct brakes taken. No problems
+                                else        -- overshoot
+                                    -- overshoot
+                                    if brakescore >= 2 then
+                                        -- elimination
+                                        print("Crashed out")
+                                        cars[1].isEliminated = true
+                                    else
+                                        -- see how many cells was overshot
+                                        -- some complex rules about spinning etc
+                                        if cars[1].wptyres > 0 then
+                                            -- different set of rules
+                                            if cars[1].wptyres > cars[1].movesleft then
+                                                -- normal overshoot
+                                                lovelyToasts.show(cars[1].movesleft .. " tyre points used", 15, "middle")
+                                                cars[1].wptyres = cars[1].wptyres - cars[1].movesleft
+                                            elseif cars[1].wptyres == cars[1].movesleft then
+                                                -- spin
+                                                cars[1].wptyres = 0
+                                                cars[1].isSpun = true
+                                                cars[1].gear = 0
+                                                lovelyToasts.show("0 tyre points left. Car spun", 15, "middle")
+                                            elseif cars[1].movesleft > cars[1].wptyres then
                                                 -- crash out
-                                                print("Crashed. Overshoot > 2 while out of tyre wear points")
+                                                print("Crashed. Overshoot is greater than tyre wear points")
                                                 cars[1].isEliminated = true
                                                 cars[1].isSpun = true
                                             end
-                                        elseif cars[1].movesleft > 1 then
-                                            -- crash
-                                            print("Crashed. Overshoot > 1 while out of tyre wear points")
-                                            cars[1].isEliminated = true
-                                            cars[1].isSpun = true
+                                        elseif cars[1].wptyres == 0 then
+                                            -- special rules when wptyres == 0
+                                            if cars[1].movesleft == 1 then  -- oveshoot on zero tyres has an odd rule
+                                                cars[1].overshootcount = cars[1].overshootcount + 1
+                                                casr[1].isSpun = true
+                                                cars[1].gear = 0
+
+                                                if cars[1].overshootcount > 2 then
+                                                    -- crash out
+                                                    print("Crashed. Overshoot > 2 while out of tyre wear points")
+                                                    cars[1].isEliminated = true
+                                                    cars[1].isSpun = true
+                                                end
+                                            elseif cars[1].movesleft > 1 then
+                                                -- crash
+                                                print("Crashed. Overshoot > 1 while out of tyre wear points")
+                                                cars[1].isEliminated = true
+                                                cars[1].isSpun = true
+                                            else
+                                                error("Oops. Unexpected code executed", 394)
+                                            end
                                         else
-                                            error("Oops. Unexpected code executed", 394)
+                                            error("Oops. Unexpected code executed", 399)
                                         end
-                                    else
-                                        error("Oops. Unexpected code executed", 399)
                                     end
                                 end
+                                cars[1].brakestaken = 0     -- reset for next corner
                             end
-                            cars[1].brakestaken = 0     -- reset for next corner
-                        end
 
-                        checkForElimination(1)      -- carindex
+                            checkForElimination(1)      -- carindex
 
-                        if racetrack[cars[1].cell].isFinish then
-                            if numberofturns > 5 then          -- arbitrary value
-                                -- WIN!
-                                print("Lap time = " .. numberofturns)
-                                lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
+                            -- count the number of laps completed
+                            if racetrack[cars[1].cell].isFinish then
+                                if numberofturns > 5 then          -- arbitrary value
+                                    -- WIN!
+                                    print("Lap time = " .. numberofturns)
+                                    lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
 
-                                -- see if history should replace the ghost
-                                if ghost == nil or numberofturns < #ghost then
-                                    fileops.saveGhost(history[1])
+                                    -- see if history should replace the ghost
+                                    if ghost == nil or numberofturns < #ghost then
+                                        fileops.saveGhost(history[1])
+                                    end
+
+                                    -- update the bot AI
+                                    -- use the cars log to update the bots knowledge of the race track
+    								-- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
+    					            --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
+    								-- these two things gives the bot AI something to strive for when selecting gears
+    								for k, v in pairs(cars[1].log) do
+                                        if trackknowledge == nil then trackknowledge = {} end
+                                        if trackknowledge[k] == nil then trackknowledge[k] = {} end
+    									if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
+                                            if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
+        										-- this log has a faster time than previously recorded
+        										-- update track knowledge with this new information
+        										trackknowledge[k].besttime = numberofturns
+        										trackknowledge[k].moves = v.moves
+                                            end
+    									end
+    								end
+                                    local success = fileops.saveTrackKnowledge(trackknowledge)
+                                    print("Knowledge save success: " .. tostring(success))
+                                    print(inspect(trackknowledge))
                                 end
+                            end
 
-                                -- update the bot AI
-                                -- use the cars log to update the bots knowledge of the race track
-								-- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
-					            --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
-								-- these two things gives the bot AI something to strive for when selecting gears
-								for k, v in pairs(cars[1].log) do
-                                    if trackknowledge == nil then trackknowledge = {} end
-                                    if trackknowledge[k] == nil then trackknowledge[k] = {} end
-									if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
-                                        if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
-    										-- this log has a faster time than previously recorded
-    										-- update track knowledge with this new information
-    										trackknowledge[k].besttime = numberofturns
-    										trackknowledge[k].moves = v.moves
-                                        end
-									end
-								end
-                                local success = fileops.saveTrackKnowledge(trackknowledge)
-                                print("Knowledge save success: " .. tostring(success))
-                                print(inspect(trackknowledge))
+                            if cars[1].movesleft < 1 then
+                                currentplayer = currentplayer + 1
+                                if currentplayer > numofcars then currentplayer = 1 end
                             end
                         end
+                    else
+                        -- no desired cell. Do nothing. Move not legal
                     end
-                else
                 end
             end
         end
-    else
+    else        -- edit mode = true
         -- edit mode = true
         if button == 2 then
             local cell1 = getSelectedCell()
@@ -573,7 +673,6 @@ end
 function race.wheelmoved(x, y)
 
     if not EDIT_MODE then
-
     	if y > 0 then
     		-- wheel moved up. Zoom in
     		ZOOMFACTOR = ZOOMFACTOR + 0.05
@@ -581,7 +680,6 @@ function race.wheelmoved(x, y)
     	if y < 0 then
     		ZOOMFACTOR = ZOOMFACTOR - 0.05
     	end
-    	-- if ZOOMFACTOR < 0.8 then ZOOMFACTOR = 0.8 end
     	if ZOOMFACTOR > 3 then ZOOMFACTOR = 3 end
     	print("Zoom factor = " .. ZOOMFACTOR)
     else
@@ -671,30 +769,34 @@ function race.draw()
     end
 
     -- draw number of moves left beside the mouse
-    if cars[1].movesleft > 0 then
-        drawx, drawy = love.mouse.getPosition()
-        drawx, drawy = cam:toWorld(drawx, drawy)
+    if currentplayer == 1 then
+        if cars[1].movesleft > 0 then
+            drawx, drawy = love.mouse.getPosition()
+            drawx, drawy = cam:toWorld(drawx, drawy)
 
-        if racetrack[cars[1].cell].isCorner then
-            -- the cell doesn't contain any knowledge about the speedcheck value so can't change mouse counter colours or any other
-            -- feedback. Might need to build speedcheck into the cell - but how to do with editor?
+            if racetrack[cars[1].cell].isCorner then
+                -- the cell doesn't contain any knowledge about the speedcheck value so can't change mouse counter colours or any other
+                -- feedback. Might need to build speedcheck into the cell - but how to do with editor?
+            end
+
+            love.graphics.setColor(1,1,1,1)     -- white
+            love.graphics.setFont(FONT[enum.fontCorporate])
+            love.graphics.print(cars[1].movesleft, drawx + 20, drawy - 5)
+            love.graphics.setFont(FONT[enum.fontDefault])
         end
-
-        love.graphics.setColor(1,1,1,1)     -- white
-        love.graphics.setFont(FONT[enum.fontCorporate])
-        love.graphics.print(cars[1].movesleft, drawx + 20, drawy - 5)
-        love.graphics.setFont(FONT[enum.fontDefault])
     end
 
     -- draw the ghost, if there is one
-    if ghost ~= nil then        -- will be nil if no ghost.dat file exists
-        if ghost[numberofturns] ~= nil then
-            local ghostcell = ghost[numberofturns]
+    if currentplayer == 1 then
+        if ghost ~= nil then        -- will be nil if no ghost.dat file exists
+            if ghost[numberofturns] ~= nil then
+                local ghostcell = ghost[numberofturns]
 
-            local drawx = racetrack[ghostcell].x
-            local drawy = racetrack[ghostcell].y
-            love.graphics.setColor(1,1,1,0.5)
-            love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[ghostcell].rotation , 1, 1, 32, 15)
+                local drawx = racetrack[ghostcell].x
+                local drawy = racetrack[ghostcell].y
+                love.graphics.setColor(1,1,1,0.5)
+                love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[ghostcell].rotation , 1, 1, 32, 15)
+            end
         end
     end
 
@@ -791,82 +893,31 @@ function race.draw()
     love.graphics.print("Turns: " .. numberofturns, drawx, drawy)
     drawy = drawy + 35
 
-    love.graphics.print("Gear: " .. cars[1].gear, drawx, drawy)
+    love.graphics.print("Player #" .. currentplayer, drawx, drawy)
     drawy = drawy + 35
-    love.graphics.print("Moves left: " .. cars[1].movesleft, drawx, drawy)
+    love.graphics.print("Gear: " .. cars[currentplayer].gear, drawx, drawy)
     drawy = drawy + 35
-    love.graphics.print("Stops in corner: " .. cars[1].brakestaken, drawx, drawy)
+    love.graphics.print("Moves left: " .. cars[currentplayer].movesleft, drawx, drawy)
     drawy = drawy + 35
-    love.graphics.print("Tyre wear points: " .. cars[1].wptyres, drawx, drawy)
+    love.graphics.print("Stops in corner: " .. cars[currentplayer].brakestaken, drawx, drawy)
     drawy = drawy + 35
-    love.graphics.print("Brake wear points: " .. cars[1].wpbrakes, drawx, drawy)
+    love.graphics.print("Tyre wear points: " .. cars[currentplayer].wptyres, drawx, drawy)
     drawy = drawy + 35
-    love.graphics.print("Gearbox wear points: " .. cars[1].wpgearbox, drawx, drawy)
+    love.graphics.print("Brake wear points: " .. cars[currentplayer].wpbrakes, drawx, drawy)
     drawy = drawy + 35
-    love.graphics.print("Engine wear points: " .. cars[1].wpengine, drawx, drawy)
+    love.graphics.print("Gearbox wear points: " .. cars[currentplayer].wpgearbox, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Engine wear points: " .. cars[currentplayer].wpengine, drawx, drawy)
     drawy = drawy + 35
 
     -- draw the gear stick on top of the sidebarwidth
-    -- draw the lines on the gear stick first
-    love.graphics.line(gearstick[1].x, gearstick[1].y, gearstick[2].x, gearstick[2].y)
-    love.graphics.line(gearstick[3].x, gearstick[3].y, gearstick[4].x, gearstick[4].y)
-    love.graphics.line(gearstick[5].x, gearstick[5].y, gearstick[6].x, gearstick[6].y)
-    local drawy = gearstick[1].y - (gearstick[1].y - gearstick[2].y) / 2
-    love.graphics.line(gearstick[1].x, drawy, gearstick[6].x, drawy)
-    -- draw the knobs
-    for k, v in pairs(gearstick) do
-        if cars[1].gear == k then           -- set the colour green if this gear is selected
-            love.graphics.setColor(0,1,0,1)
-        else
-            love.graphics.setColor(1,1,1,1)
-        end
-        love.graphics.circle("fill", v.x, v.y, 10)
-        -- draw the numbers on the knobs
-        love.graphics.setColor(0,0,0,1)
-        love.graphics.print(k, v.x - 4, v.y - 6)
+    if currentplayer == 1 then
+        drawGearStick(cars[1].gear)
     end
 
     if not EDIT_MODE then
         -- draw the topbar (gearbox matrix)
-        local topbarheight = 225
-        love.graphics.setColor(0, 0, 0, 0.75)
-        love.graphics.rectangle("fill", 0, 0, SCREEN_WIDTH - sidebarwidth, topbarheight)
-
-        -- draw the gearbox
-        -- draw the speed along the top
-        local drawx = 100
-        local drawy = 25
-        love.graphics.setColor(1,1,1,1)
-        for i = 1, 40 do
-            love.graphics.print(i, drawx + 10, drawy)       -- the +10 centres the text
-            drawx = drawx + 30
-        end
-
-        -- draw the gears down the side of the matrix
-        drawx = 50
-        drawy = 50
-        for i = 1, 6 do
-            love.graphics.setColor(1,1,1,1)
-            love.graphics.print("Gear " .. i, drawx, drawy + 4)         -- the +4 centres the text
-            drawy = drawy + 25
-        end
-
-        -- now fill in the matrix
-        -- add white boxes everywhere
-        for i = 1, 6 do     -- this is not cars - its gears
-            for j = 1, 40 do
-                local drawx1 = 70 + (30 * j)
-                local drawy1 = 25 + (25 * i)
-                love.graphics.setColor(1,1,1,0.5)
-                love.graphics.rectangle("line", drawx1, drawy1, 30, 25)
-
-                -- now fill the cell if a gear can access this speed
-                if j >= cars[1].gearbox[i][1] and j <= cars[1].gearbox[i][2] then
-                    love.graphics.setColor(0,1,0,0.75)
-                    love.graphics.rectangle("fill", drawx1, drawy1, 30, 25)
-                end
-            end
-        end
+        drawGearboxMatrix()
     end
 
     -- edit mode
@@ -875,15 +926,20 @@ function race.draw()
         love.graphics.print("EDIT MODE", 50, 50)
 
         local drawx = SCREEN_WIDTH - sidebarwidth + 10
-        local drawy = 355
+        local drawy = 450
 
-        love.graphics.print("Cell #" .. cars[1].cell, drawx, drawy)
-        drawy = drawy + 35
-        -- draw the links for the current cell
-        for k, v in pairs(racetrack[cars[1].cell].link) do
-            if v == true then
-                love.graphics.print("Links to " .. k, drawx, drawy)
-                drawy = drawy + 35
+        -- print the number of the selected cell
+        local getcellnumber = getSelectedCell()
+        if getcellnumber ~= nil then
+            love.graphics.print("Cell #" .. getSelectedCell(), drawx, drawy)
+            drawy = drawy + 35
+
+            -- draw the links for the selected cell
+            for k, v in pairs(racetrack[getcellnumber].link) do
+                if v == true then
+                    love.graphics.print("Links to " .. k, drawx, drawy)
+                    drawy = drawy + 35
+                end
             end
         end
     end
