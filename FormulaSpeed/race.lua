@@ -62,6 +62,42 @@ local function getSelectedCell()
     return nil
 end
 
+local function isCellClear(cellindex)
+	-- returns true if no cars are on the provided cell
+	for k, v in pairs(cars) do
+		if v.cell == cellindex then
+			-- cell is not clear
+			return false
+		end
+	end
+	return true
+end
+
+local function findClearPath(stack, fromcell, movesleft)
+	-- starting at fromcell, find a path that uses at least movesleft steps)
+    -- eg cell #1 to cell #25
+
+	-- local stack = {}
+	local currentcell = fromcell
+	local stepsneeded = movesleft
+	for k, v in pairs(racetrack[currentcell].link) do
+        local nextrandomcell = k		-- k is the cell number of the link
+		if isCellClear(nextrandomcell) then
+            table.insert(stack, nextrandomcell)
+			stepsneeded = stepsneeded - 1
+            if stepsneeded < 1 then
+                -- job done
+                return stack
+            else
+                -- steps not exhausted yet. Keep going
+                stack = findClearPath(stack, nextrandomcell, stepsneeded)
+                return stack
+            end
+        end
+    end
+    return stack
+end
+
 local function loadRaceTrack()
     -- loads the hardcoded track into the racetrack variable
     racetrack = fileops.loadRaceTrack()
@@ -80,6 +116,13 @@ local function loadRaceTrack()
     else
         print("Track knowledge loaded.")
     end
+
+    -- ## testing
+    local path = {}
+    local path = findClearPath(path, 1, 8)
+    print("Path:")
+    print(inspect(path))
+
 end
 
 local function loadCars()
@@ -669,7 +712,7 @@ function race.draw()
                 love.graphics.line(v.x, v.y, x2, y2)
 
                 -- draw the cell number
-                -- love.graphics.print(k, v.x + 6, v.y - 6)
+                love.graphics.print(k, v.x + 6, v.y - 6)
 
                 -- draw the cell images
                 if v.isCorner then
