@@ -84,6 +84,10 @@ end
 local function findClearPath(stack, fromcell, movesleft)
 	-- starting at fromcell, find a path that uses at least movesleft steps)
     -- eg cell #1 to cell #25
+    -- input: a table that will start empty and be filled
+    -- input: the cell the path starts at
+    -- input: how many cells to look forward (moves left/dice roll)
+    --! how does this behave when blocked and no path?
 
 	-- local stack = {}
 	local currentcell = fromcell
@@ -129,7 +133,6 @@ local function loadRaceTrack()
     -- local path = findClearPath(path, 1, 8)
     -- print("Path:")
     -- print(inspect(path))
-
 end
 
 local function loadCars()
@@ -275,17 +278,26 @@ local function checkForElimination(carindex)
     end
 end
 
-local function botSelectGear()
+local function botSelectGear(botnumber)
     return 1    --!
 end
 
-local function botMoves(butnumber)
+local function applyMoves(carindex)
 
+    local path = {}
+    path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
+    for i = 1, #path do     -- must be a for loop to get the correct sequence
+        cars[carindex].cell = path[i]
+    end
+end
 
+local function botMoves(botnumber)
+    addCarMoves(botnumber)       -- assumes the gear has been set
+    applyMoves(botnumber)
 end
 
 local function moveBots()
-    local botgear = botSelectGear(currentplayer)
+    cars[currentplayer].gear = botSelectGear(currentplayer)
     botMoves(currentplayer)
     incCurrentPlayer()
 end
