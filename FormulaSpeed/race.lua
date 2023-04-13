@@ -2,7 +2,7 @@ race = {}
 
 local racetrack = {}          -- the network of cells
 local cars = {}               -- a table of cars
-local numofcars = 2
+local numofcars = 6
 
 local celllength = 128
 local cellwidth = 64
@@ -24,7 +24,10 @@ local currentplayer = 1                 -- value from 1 -> numofcars
 local function incCurrentPlayer()
     -- operates on global. Returns nothing.
     currentplayer = currentplayer + 1
-    if currentplayer > numofcars then currentplayer = 1 end
+    if currentplayer > numofcars then
+        currentplayer = 1
+        numberofturns = numberofturns + 1
+    end
 end
 
 local function unselectAllCells()
@@ -200,6 +203,8 @@ local function loadCars()
         cars[i].gearbox[6] = {}
         cars[i].gearbox[6][1] = love.math.random(20, 22)
         cars[i].gearbox[6][2] = love.math.random(29, 31)
+
+        print(inspect(cars[i].gearbox))
     end
 
     -- load the ghost history, if there is one
@@ -256,8 +261,10 @@ end
 local function addCarMoves(carindex)
     -- need to set the correct gear BEFORE calling this function
     -- assign a random number of moves based on new gear
-    local low = cars[carindex].gearbox[cars[carindex].gear][carindex]
-    local high = cars[carindex].gearbox[cars[carindex].gear][2]
+    local currentgear = cars[carindex].gear     -- done for readability
+    local low = cars[carindex].gearbox[currentgear][1]
+    local high = cars[carindex].gearbox[currentgear][2]
+print(carindex, low, high)
     diceroll = love.math.random(low, high)      -- capture this here and use it for the AI
     cars[carindex].movesleft = diceroll
 end
@@ -278,6 +285,145 @@ local function checkForElimination(carindex)
     end
 end
 
+local function executeLegalMove(carindex, desiredcell)
+    -- moves to desired cell which is just one cell away
+    cars[carindex].cell = desiredcell
+    cars[carindex].movesleft = cars[carindex].movesleft - 1
+
+    -- if ending turn in corner then give credit for the braking
+    if cars[carindex].movesleft < 1 then
+        -- end of turn
+        cars[carindex].movesleft = 0
+
+        -- add to history
+        history[carindex][numberofturns] = cars[carindex].cell
+
+        -- add move to the log file for this car
+        -- happens end of every move and is used for the bots AI. Different to history[] which is used for the ghost
+        -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 moves left
+        if cars[carindex].log[desiredcell] == nil then     -- at this point, desiredcell = cars[1].cell
+            cars[carindex].log[desiredcell] = {}
+        end
+        cars[carindex].log[desiredcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
+
+        -- give credit for braking in corner
+        if racetrack[desiredcell].isCorner then
+            cars[carindex].brakestaken = cars[carindex].brakestaken + 1
+        end
+
+        -- print prediction to console if known
+        if trackknowledge ~= nil then
+            if trackknowledge[cars[carindex].cell] ~= nil then
+                if trackknowledge[cars[carindex].cell].moves ~= nil and trackknowledge[cars[carindex].cell].moves ~= 0 then
+                    -- print("Bot AI suggested speed = " .. trackknowledge[cars[carindex].cell].moves)
+                end
+            end
+        end
+    end
+
+    -- if leaving corner, see if correct number of stops made
+    if racetrack[cars[carindex].cell].speedCheck ~= nil then
+        local brakescore = racetrack[cars[carindex].cell].speedCheck - cars[carindex].brakestaken
+        if brakescore <= 0 then
+            -- correct brakes taken. No problems
+        else        -- overshoot
+            -- overshoot
+            if brakescore >= 2 then
+                -- elimination
+                print("Crashed out")
+                cars[carindex].isEliminated = true
+            else
+                -- see how many cells was overshot
+                -- some complex rules about spinning etc
+                if cars[carindex].wptyres > 0 then
+                    -- different set of rules
+                    if cars[carindex].wptyres > cars[carindex].movesleft then
+                        -- normal overshoot
+                        lovelyToasts.show(cars[carindex].movesleft .. " tyre points used", 15, "middle")
+                        cars[carindex].wptyres = cars[carindex].wptyres - cars[carindex].movesleft
+                    elseif cars[carindex].wptyres == cars[carindex].movesleft then
+                        -- spin
+                        cars[carindex].wptyres = 0
+                        cars[carindex].isSpun = true
+                        cars[carindex].gear = 0
+                        lovelyToasts.show("0 tyre points left. Car spun", 15, "middle")
+                    elseif cars[carindex].movesleft > cars[carindex].wptyres then
+                        -- crash out
+                        print("Crashed. Overshoot is greater than tyre wear points")
+                        cars[carindex].isEliminated = true
+                        cars[carindex].isSpun = true
+                    end
+                elseif cars[carindex].wptyres == 0 then
+                    -- special rules when wptyres == 0
+                    if cars[carindex].movesleft == 1 then  -- oveshoot on zero tyres has an odd rule
+                        cars[carindex].overshootcount = cars[carindex].overshootcount + 1
+                        casr[1].isSpun = true
+                        cars[carindex].gear = 0
+
+                        if cars[carindex].overshootcount > 2 then
+                            -- crash out
+                            print("Crashed. Overshoot > 2 while out of tyre wear points")
+                            cars[carindex].isEliminated = true
+                            cars[carindex].isSpun = true
+                        end
+                    elseif cars[carindex].movesleft > 1 then
+                        -- crash
+                        print("Crashed. Overshoot > 1 while out of tyre wear points")
+                        cars[carindex].isEliminated = true
+                        cars[carindex].isSpun = true
+                    else
+                        error("Oops. Unexpected code executed", 394)
+                    end
+                else
+                    error("Oops. Unexpected code executed", 399)
+                end
+            end
+        end
+        cars[carindex].brakestaken = 0     -- reset for next corner
+    end
+
+    checkForElimination(carindex)      -- carindex
+
+    -- count the number of laps completed
+    if racetrack[cars[carindex].cell].isFinish then
+        if numberofturns > 5 then          -- arbitrary value
+            -- WIN!
+            print("Lap time = " .. numberofturns)
+            lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
+
+            -- see if history should replace the ghost
+            if ghost == nil or numberofturns < #ghost then
+                fileops.saveGhost(history[carindex])
+            end
+
+            -- update the bot AI
+            -- use the cars log to update the bots knowledge of the race track
+            -- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
+            --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
+            -- these two things gives the bot AI something to strive for when selecting gears
+            for k, v in pairs(cars[carindex].log) do
+                if trackknowledge == nil then trackknowledge = {} end
+                if trackknowledge[k] == nil then trackknowledge[k] = {} end
+                if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
+                    if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
+                        -- this log has a faster time than previously recorded
+                        -- update track knowledge with this new information
+                        trackknowledge[k].besttime = numberofturns
+                        trackknowledge[k].moves = v.moves
+                    end
+                end
+            end
+            local success = fileops.saveTrackKnowledge(trackknowledge)
+            print("Knowledge save success: " .. tostring(success))
+            print(inspect(trackknowledge))
+        end
+    end
+
+    if cars[carindex].movesleft < 1 then
+        incCurrentPlayer()
+    end
+end
+
 local function botSelectGear(botnumber)
     return 1    --!
 end
@@ -286,8 +432,10 @@ local function applyMoves(carindex)
 
     local path = {}
     path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
-    for i = 1, #path do     -- must be a for loop to get the correct sequence
-        cars[carindex].cell = path[i]
+    while #path > 0 do
+        local desiredcell = path[1]
+        executeLegalMove(carindex, desiredcell)
+        table.remove(path, 1)
     end
 end
 
@@ -299,7 +447,7 @@ end
 local function moveBots()
     cars[currentplayer].gear = botSelectGear(currentplayer)
     botMoves(currentplayer)
-    incCurrentPlayer()
+    -- incCurrentPlayer()
 end
 
 local function drawGearStick(currentgear)
@@ -546,141 +694,7 @@ function race.mousereleased(rx, ry, x, y, button)
                     if desiredcell ~= nil then
                         if racetrack[currentcell].link[desiredcell] == true then
                             -- move is legal
-                            cars[1].cell = desiredcell
-                            cars[1].movesleft = cars[1].movesleft - 1
-
-                            -- if ending turn in corner then give credit for the braking
-                            if cars[1].movesleft < 1 then
-                                -- end of turn
-                                cars[1].movesleft = 0
-                                numberofturns = numberofturns + 1
-
-                                -- add to history
-                                history[1][numberofturns] = cars[1].cell
-
-                                -- add move to the log file for this car
-                                -- happens end of every move and is used for the bots AI. Different to history[] which is used for the ghost
-                                -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 moves left
-                                if cars[1].log[desiredcell] == nil then     -- at this point, desiredcell = cars[1].cell
-                                    cars[1].log[desiredcell] = {}
-                                end
-                                cars[1].log[desiredcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
-
-                                -- give credit for braking in corner
-                                if racetrack[cars[1].cell].isCorner then
-                                    cars[1].brakestaken = cars[1].brakestaken + 1
-                                end
-
-                                if trackknowledge ~= nil then
-                                    if trackknowledge[cars[1].cell] ~= nil then
-                                        if trackknowledge[cars[1].cell].moves ~= nil and trackknowledge[cars[1].cell].moves ~= 0 then
-                                            print("Bot AI suggested speed = " .. trackknowledge[cars[1].cell].moves)
-                                        end
-                                    end
-                                end
-                            end
-
-                            -- if leaving corner, see if correct number of stops made
-                            if racetrack[cars[1].cell].speedCheck ~= nil then
-                                local brakescore = racetrack[cars[1].cell].speedCheck - cars[1].brakestaken
-                                if brakescore <= 0 then
-                                    -- correct brakes taken. No problems
-                                else        -- overshoot
-                                    -- overshoot
-                                    if brakescore >= 2 then
-                                        -- elimination
-                                        print("Crashed out")
-                                        cars[1].isEliminated = true
-                                    else
-                                        -- see how many cells was overshot
-                                        -- some complex rules about spinning etc
-                                        if cars[1].wptyres > 0 then
-                                            -- different set of rules
-                                            if cars[1].wptyres > cars[1].movesleft then
-                                                -- normal overshoot
-                                                lovelyToasts.show(cars[1].movesleft .. " tyre points used", 15, "middle")
-                                                cars[1].wptyres = cars[1].wptyres - cars[1].movesleft
-                                            elseif cars[1].wptyres == cars[1].movesleft then
-                                                -- spin
-                                                cars[1].wptyres = 0
-                                                cars[1].isSpun = true
-                                                cars[1].gear = 0
-                                                lovelyToasts.show("0 tyre points left. Car spun", 15, "middle")
-                                            elseif cars[1].movesleft > cars[1].wptyres then
-                                                -- crash out
-                                                print("Crashed. Overshoot is greater than tyre wear points")
-                                                cars[1].isEliminated = true
-                                                cars[1].isSpun = true
-                                            end
-                                        elseif cars[1].wptyres == 0 then
-                                            -- special rules when wptyres == 0
-                                            if cars[1].movesleft == 1 then  -- oveshoot on zero tyres has an odd rule
-                                                cars[1].overshootcount = cars[1].overshootcount + 1
-                                                casr[1].isSpun = true
-                                                cars[1].gear = 0
-
-                                                if cars[1].overshootcount > 2 then
-                                                    -- crash out
-                                                    print("Crashed. Overshoot > 2 while out of tyre wear points")
-                                                    cars[1].isEliminated = true
-                                                    cars[1].isSpun = true
-                                                end
-                                            elseif cars[1].movesleft > 1 then
-                                                -- crash
-                                                print("Crashed. Overshoot > 1 while out of tyre wear points")
-                                                cars[1].isEliminated = true
-                                                cars[1].isSpun = true
-                                            else
-                                                error("Oops. Unexpected code executed", 394)
-                                            end
-                                        else
-                                            error("Oops. Unexpected code executed", 399)
-                                        end
-                                    end
-                                end
-                                cars[1].brakestaken = 0     -- reset for next corner
-                            end
-
-                            checkForElimination(1)      -- carindex
-
-                            -- count the number of laps completed
-                            if racetrack[cars[1].cell].isFinish then
-                                if numberofturns > 5 then          -- arbitrary value
-                                    -- WIN!
-                                    print("Lap time = " .. numberofturns)
-                                    lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
-
-                                    -- see if history should replace the ghost
-                                    if ghost == nil or numberofturns < #ghost then
-                                        fileops.saveGhost(history[1])
-                                    end
-
-                                    -- update the bot AI
-                                    -- use the cars log to update the bots knowledge of the race track
-    								-- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
-    					            --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
-    								-- these two things gives the bot AI something to strive for when selecting gears
-    								for k, v in pairs(cars[1].log) do
-                                        if trackknowledge == nil then trackknowledge = {} end
-                                        if trackknowledge[k] == nil then trackknowledge[k] = {} end
-    									if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
-                                            if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
-        										-- this log has a faster time than previously recorded
-        										-- update track knowledge with this new information
-        										trackknowledge[k].besttime = numberofturns
-        										trackknowledge[k].moves = v.moves
-                                            end
-    									end
-    								end
-                                    local success = fileops.saveTrackKnowledge(trackknowledge)
-                                    print("Knowledge save success: " .. tostring(success))
-                                    print(inspect(trackknowledge))
-                                end
-                            end
-
-                            if cars[1].movesleft < 1 then
-                                incCurrentPlayer()
-                            end
+                            executeLegalMove(1, desiredcell)
                         end
                     else
                         -- no desired cell. Do nothing. Move not legal
