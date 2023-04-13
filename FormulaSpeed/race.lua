@@ -264,7 +264,6 @@ local function addCarMoves(carindex)
     local currentgear = cars[carindex].gear     -- done for readability
     local low = cars[carindex].gearbox[currentgear][1]
     local high = cars[carindex].gearbox[currentgear][2]
-print(carindex, low, high)
     diceroll = love.math.random(low, high)      -- capture this here and use it for the AI
     cars[carindex].movesleft = diceroll
 end
@@ -425,7 +424,12 @@ local function executeLegalMove(carindex, desiredcell)
 end
 
 local function botSelectGear(botnumber)
-    return 1    --!
+    local rnd = love.math.random(-1, 1)
+    print("Rnd: " .. rnd)
+    local result = cars[botnumber].gear + rnd
+    if result < 1 then result = 1 end
+    if result > 6 then result = 6 end
+    return result
 end
 
 local function applyMoves(carindex)
