@@ -77,7 +77,7 @@ end
 function love.mousemoved(x, y, dx, dy, istouch )
 	local currentscene = cf.currentScreenName(SCREEN_STACK)
 	if currentscene == enum.sceneRace then
-		race.mousemoved(x, y)
+		race.mousemoved(x, y, dx, dy)
 	end
 end
 

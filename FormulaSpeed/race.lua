@@ -2,7 +2,7 @@ race = {}
 
 local racetrack = {}          -- the network of cells
 local cars = {}               -- a table of cars
-local numofcars = 6
+local numofcars = 1
 
 local celllength = 128
 local cellwidth = 64
@@ -62,6 +62,42 @@ local function getSelectedCell()
     return nil
 end
 
+local function isCellClear(cellindex)
+	-- returns true if no cars are on the provided cell
+	for k, v in pairs(cars) do
+		if v.cell == cellindex then
+			-- cell is not clear
+			return false
+		end
+	end
+	return true
+end
+
+local function findClearPath(stack, fromcell, movesleft)
+	-- starting at fromcell, find a path that uses at least movesleft steps)
+    -- eg cell #1 to cell #25
+
+	-- local stack = {}
+	local currentcell = fromcell
+	local stepsneeded = movesleft
+	for k, v in pairs(racetrack[currentcell].link) do
+        local nextrandomcell = k		-- k is the cell number of the link
+		if isCellClear(nextrandomcell) then
+            table.insert(stack, nextrandomcell)
+			stepsneeded = stepsneeded - 1
+            if stepsneeded < 1 then
+                -- job done
+                return stack
+            else
+                -- steps not exhausted yet. Keep going
+                stack = findClearPath(stack, nextrandomcell, stepsneeded)
+                return stack
+            end
+        end
+    end
+    return stack
+end
+
 local function loadRaceTrack()
     -- loads the hardcoded track into the racetrack variable
     racetrack = fileops.loadRaceTrack()
@@ -80,6 +116,13 @@ local function loadRaceTrack()
     else
         print("Track knowledge loaded.")
     end
+
+    -- ## testing
+    local path = {}
+    -- local path = findClearPath(path, 1, 8)
+    -- print("Path:")
+    -- print(inspect(path))
+
 end
 
 local function loadCars()
@@ -87,52 +130,52 @@ local function loadCars()
     for i = 1, numofcars do
         cars[i] = {}
         history[i] = {}         -- tracks the history for this race only
+
+        cars[i].cell = 1
+        cars[i].gear = 0
+        cars[i].wptyres = 6
+        cars[i].wpbrakes = 3
+        cars[i].wpgearbox = 3
+        cars[i].wpbody = 3
+        cars[i].wpengine = 3
+        cars[i].wphandling = 2
+        cars[i].movesleft = 0
+        cars[i].brakestaken = 0             -- how many times did car stop in current corner
+        cars[i].isEliminated = false
+        cars[i].isSpun = false
+        cars[i].overshootcount = 0              -- used for special rule when wptyres == 0
+        cars[i].log = {}
+
+        -- gearbox
+        -- randomise the gearbox. Example:
+        -- gearbox[3][1] = the lowest value for gearbox 3
+        -- gearbox[3][2] = the highest value for gearbox 3
+        cars[i].gearbox = {}
+        cars[i].gearbox[1] = {}
+        cars[i].gearbox[1][1] = 1
+        cars[i].gearbox[1][2] = love.math.random(1, 3)
+
+        cars[i].gearbox[2] = {}
+        cars[i].gearbox[2][1] = love.math.random(1, 3)
+        cars[i].gearbox[2][2] = love.math.random(1, 5)
+        if cars[i].gearbox[2][2] < cars[i].gearbox[2][1] then cars[i].gearbox[2][2] = cars[i].gearbox[2][1] end
+
+        cars[i].gearbox[3] = {}
+        cars[i].gearbox[3][1] = love.math.random(3, 5)
+        cars[i].gearbox[3][2] = love.math.random(7, 9)
+
+        cars[i].gearbox[4] = {}
+        cars[i].gearbox[4][1] = love.math.random(6, 8)
+        cars[i].gearbox[4][2] = love.math.random(11, 13)
+
+        cars[i].gearbox[5] = {}
+        cars[i].gearbox[5][1] = love.math.random(10, 12)
+        cars[i].gearbox[5][2] = love.math.random(19, 21)
+
+        cars[i].gearbox[6] = {}
+        cars[i].gearbox[6][1] = love.math.random(20, 22)
+        cars[i].gearbox[6][2] = love.math.random(29, 31)
     end
-
-    cars[1].cell = 1
-    cars[1].gear = 0
-    cars[1].wptyres = 6
-    cars[1].wpbrakes = 3
-    cars[1].wpgearbox = 3
-    cars[1].wpbody = 3
-    cars[1].wpengine = 3
-    cars[1].wphandling = 2
-    cars[1].movesleft = 0
-    cars[1].brakestaken = 0             -- how many times did car stop in current corner
-    cars[1].isEliminated = false
-    cars[1].isSpun = false
-    cars[1].overshootcount = 0              -- used for special rule when wptyres == 0
-    cars[1].log = {}
-
-    -- gearbox
-    -- randomise the gearbox. Example:
-    -- gearbox[3][1] = the lowest value for gearbox 3
-    -- gearbox[3][2] = the highest value for gearbox 3
-    cars[1].gearbox = {}
-    cars[1].gearbox[1] = {}
-    cars[1].gearbox[1][1] = 1
-    cars[1].gearbox[1][2] = love.math.random(1, 3)
-
-    cars[1].gearbox[2] = {}
-    cars[1].gearbox[2][1] = love.math.random(1, 3)
-    cars[1].gearbox[2][2] = love.math.random(1, 5)
-    if cars[1].gearbox[2][2] < cars[1].gearbox[2][1] then cars[1].gearbox[2][2] = cars[1].gearbox[2][1] end
-
-    cars[1].gearbox[3] = {}
-    cars[1].gearbox[3][1] = love.math.random(3, 5)
-    cars[1].gearbox[3][2] = love.math.random(7, 9)
-
-    cars[1].gearbox[4] = {}
-    cars[1].gearbox[4][1] = love.math.random(6, 8)
-    cars[1].gearbox[4][2] = love.math.random(11, 13)
-
-    cars[1].gearbox[5] = {}
-    cars[1].gearbox[5][1] = love.math.random(10, 12)
-    cars[1].gearbox[5][2] = love.math.random(19, 21)
-
-    cars[1].gearbox[6] = {}
-    cars[1].gearbox[6][1] = love.math.random(20, 22)
-    cars[1].gearbox[6][2] = love.math.random(29, 31)
 
     -- load the ghost history, if there is one
     ghost = fileops.loadGhost()
@@ -589,6 +632,12 @@ end
 
 function race.mousemoved(x, y, dx, dy, istouch)
     local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
+
+    if love.mouse.isDown(3) then
+        TRANSLATEX = TRANSLATEX - dx
+        TRANSLATEY = TRANSLATEY - dy
+    end
+
     if EDIT_MODE then
         if love.mouse.isDown(1) then
             local cell = getSelectedCell()
@@ -609,7 +658,7 @@ function race.draw()
     love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
 
     -- draw the cars
-    for i = 1, 1 do
+    for i = 1, numofcars do
         local drawx = racetrack[cars[i].cell].x
         local drawy = racetrack[cars[i].cell].y
 
@@ -619,16 +668,22 @@ function race.draw()
             love.graphics.setColor(1,1,1,1)     -- white
         end
         love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
+    end
 
-        -- draw number of moves left
-        if cars[1].movesleft > 0 then
-            drawx, drawy = love.mouse.getPosition()
-            drawx, drawy = cam:toWorld(drawx, drawy)
-            love.graphics.setColor(1,1,1,1)     -- white
-            love.graphics.setFont(FONT[enum.fontCorporate])
-            love.graphics.print(cars[i].movesleft, drawx + 20, drawy - 5)
-            love.graphics.setFont(FONT[enum.fontDefault])
+    -- draw number of moves left beside the mouse
+    if cars[1].movesleft > 0 then
+        drawx, drawy = love.mouse.getPosition()
+        drawx, drawy = cam:toWorld(drawx, drawy)
+
+        if racetrack[cars[1].cell].isCorner then
+            -- the cell doesn't contain any knowledge about the speedcheck value so can't change mouse counter colours or any other
+            -- feedback. Might need to build speedcheck into the cell - but how to do with editor?
         end
+
+        love.graphics.setColor(1,1,1,1)     -- white
+        love.graphics.setFont(FONT[enum.fontCorporate])
+        love.graphics.print(cars[1].movesleft, drawx + 20, drawy - 5)
+        love.graphics.setFont(FONT[enum.fontDefault])
     end
 
     -- draw the ghost, if there is one
@@ -657,7 +712,7 @@ function race.draw()
                 love.graphics.line(v.x, v.y, x2, y2)
 
                 -- draw the cell number
-                -- love.graphics.print(k, v.x + 6, v.y - 6)
+                love.graphics.print(k, v.x + 6, v.y - 6)
 
                 -- draw the cell images
                 if v.isCorner then
@@ -766,7 +821,7 @@ function race.draw()
             love.graphics.setColor(1,1,1,1)
         end
         love.graphics.circle("fill", v.x, v.y, 10)
-        -- draw the number
+        -- draw the numbers on the knobs
         love.graphics.setColor(0,0,0,1)
         love.graphics.print(k, v.x - 4, v.y - 6)
     end
@@ -787,7 +842,7 @@ function race.draw()
             drawx = drawx + 30
         end
 
-        -- draw the gears down the side
+        -- draw the gears down the side of the matrix
         drawx = 50
         drawy = 50
         for i = 1, 6 do
@@ -798,7 +853,7 @@ function race.draw()
 
         -- now fill in the matrix
         -- add white boxes everywhere
-        for i = 1, 6 do
+        for i = 1, 6 do     -- this is not cars - its gears
             for j = 1, 40 do
                 local drawx1 = 70 + (30 * j)
                 local drawy1 = 25 + (25 * i)
