@@ -397,6 +397,7 @@ end
 
 local function executeLegalMove(carindex, desiredcell)
     -- moves to desired cell which is just one cell away
+    local originalcell = cars[carindex].cell
     cars[carindex].cell = desiredcell
     cars[carindex].movesleft = cars[carindex].movesleft - 1
 
@@ -426,21 +427,14 @@ local function executeLegalMove(carindex, desiredcell)
         if racetrack[desiredcell].isCorner then     -- desired cell is actually current cell
             cars[carindex].brakestaken = cars[carindex].brakestaken + 1
         end
-
-        -- print prediction to console if known
-        if trackknowledge ~= nil then
-            if trackknowledge[cars[carindex].cell] ~= nil then
-                if trackknowledge[cars[carindex].cell].moves ~= nil and trackknowledge[cars[carindex].cell].moves ~= 0 then
-                    -- print("Bot AI suggested speed = " .. trackknowledge[cars[carindex].cell].moves)
-                end
-            end
-        end
     end
 
     -- if leaving corner, see if correct number of stops made
-    if racetrack[cars[carindex].cell].speedCheck ~= nil then
-        local brakescore = racetrack[cars[carindex].cell].speedCheck - cars[carindex].brakestaken
-        if brakescore <= 0 then
+    if racetrack[originalcell].isCorner and not racetrack[desiredcell].isCorner then
+        -- have left the corner. Do speed check
+    -- if racetrack[cars[carindex].cell].speedCheck ~= nil then
+        local brakescore = racetrack[originalcell].speedCheck - cars[carindex].brakestaken
+        if brakescore <= 0 then     -- brake score relates to the yellow flag.
             -- correct brakes taken. No problems
         else        -- overshoot
             -- overshoot
@@ -454,16 +448,16 @@ local function executeLegalMove(carindex, desiredcell)
                 if cars[carindex].wptyres > 0 then
                     -- different set of rules
                     if cars[carindex].wptyres > cars[carindex].movesleft then
-                        -- normal overshoot
-                        lovelyToasts.show(cars[carindex].movesleft .. " tyre points used", 15, "middle")
-                        cars[carindex].wptyres = cars[carindex].wptyres - cars[carindex].movesleft
-                    elseif cars[carindex].wptyres == cars[carindex].movesleft then
+                        -- normal overshoot. The + 1 here is applied because this logic happens after the move has been deducted
+                        lovelyToasts.show(cars[carindex].movesleft + 1 .. " tyre points used", 15, "middle")
+                        cars[carindex].wptyres = cars[carindex].wptyres - cars[carindex].movesleft + 1
+                    elseif cars[carindex].wptyres == cars[carindex].movesleft + 1 then
                         -- spin
                         cars[carindex].wptyres = 0
                         cars[carindex].isSpun = true
                         cars[carindex].gear = 0
                         lovelyToasts.show("0 tyre points left. Car spun", 15, "middle")
-                    elseif cars[carindex].movesleft > cars[carindex].wptyres then
+                    elseif cars[carindex].movesleft + 1 > cars[carindex].wptyres then
                         -- crash out
                         print("Crashed. Overshoot is greater than tyre wear points")
                         cars[carindex].isEliminated = true
@@ -471,7 +465,7 @@ local function executeLegalMove(carindex, desiredcell)
                     end
                 elseif cars[carindex].wptyres == 0 then
                     -- special rules when wptyres == 0
-                    if cars[carindex].movesleft == 1 then  -- oveshoot on zero tyres has an odd rule
+                    if cars[carindex].movesleft + 1 == 1 then  -- oveshoot on zero tyres has an odd rule
                         cars[carindex].overshootcount = cars[carindex].overshootcount + 1
                         casr[1].isSpun = true
                         cars[carindex].gear = 0
@@ -482,7 +476,7 @@ local function executeLegalMove(carindex, desiredcell)
                             cars[carindex].isEliminated = true
                             cars[carindex].isSpun = true
                         end
-                    elseif cars[carindex].movesleft > 1 then
+                    elseif cars[carindex].movesleft + 1 > 1 then
                         -- crash
                         print("Crashed. Overshoot > 1 while out of tyre wear points")
                         cars[carindex].isEliminated = true
