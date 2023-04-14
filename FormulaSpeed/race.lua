@@ -22,8 +22,50 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
+local function getDistanceToFinish(startcell)
+	-- count the number of cells between the provided cell and the finish line
+	-- does NOT check for a clear path. Just measures raw distance
+	-- NOTE: this function doesn't try to find the shortest path meaning it is not very efficient (or accurate)
+	-- NOTE: gives incorrect results for cars on the grid and not yet crossed the line.
+
+	local result       -- number
+    local nextcell
+	currentcell = startcell
+    -- print("alpha")
+    -- print("Current cell = " .. currentcell)
+    -- print(inspect(racetrack[currentcell].link))
+    for k, v in pairs(racetrack[currentcell].link) do
+        print("Available link:", k, v)
+        if v == true then
+            nextcell = k
+            break       -- just need the first one
+        end
+    end
+
+    print("Next cell = " .. nextcell)
+
+	if racetrack[nextcell].isFinish then
+		result = 1
+		return result
+	else
+		result = 1 + getDistanceToFinish(nextcell)
+		return result
+	end
+
+	error("Not sure this code should ever execute.")
+end
+
 local function incCurrentPlayer()
     -- operates on global. Returns nothing.
+
+    -- find the car with the least number of turns
+    -- if more than one then find car closest to the finish line
+    -- print(currentplayer)
+    -- print(cars[currentplayer].cell)
+    local cellcount = getDistanceToFinish(cars[currentplayer].cell)
+    -- print(cellcount)
+    print("Car #" .. currentplayer .. " distance to finish = " .. getDistanceToFinish(cars[currentplayer].cell))
+
     currentplayer = currentplayer + 1
     if currentplayer > numofcars then
         currentplayer = 1
@@ -116,6 +158,21 @@ local function findClearPath(stack, fromcell, movesleft)
     return stack
 end
 
+local function removeLinksToCell(cell)
+    -- scan racetrack and remove all links to cell making it orphaned and ready for deletion
+    -- for i = 1, #racetrack do
+    for q, w in pairs(racetrack) do
+        for k, v in pairs(w.link) do
+            if k == cell and v == true then
+                -- kill this link as it's not permitted. Kill it by setting value to false
+                print("Killing link to destroyed cell# " .. k)
+                w.link[k] = false
+                print("Best to save the track in the editor")
+            end
+        end
+    end
+end
+
 local function loadRaceTrack()
     -- loads the hardcoded track into the racetrack variable
     racetrack = fileops.loadRaceTrack()
@@ -127,6 +184,14 @@ local function loadRaceTrack()
         print("Track loaded.")
     end
 
+    -- do a sanity check on the track and look for simple faults.
+    -- ensure there are no links to destroyed cells
+    for i = #racetrack, 1, -1 do
+        if racetrack[i] == nil then
+            removeLinksToCell(i)
+        end
+    end
+
     trackknowledge = {}
     trackknowledge = fileops.loadTrackKnowledge()
     if trackknowledge == nil then
@@ -135,10 +200,6 @@ local function loadRaceTrack()
         print("Track knowledge loaded.")
     end
 
-    -- ## testing
-    -- local path = findClearPath(path, 1, 8)
-    -- print("Path:")
-    -- print(inspect(path))
 end
 
 local function loadCars()
@@ -176,6 +237,7 @@ local function loadCars()
         cars[i].isSpun = false
         cars[i].overshootcount = 0              -- used for special rule when wptyres == 0
         cars[i].log = {}
+        cars[i].turns = 0                       -- how many turns taken
 
         -- gearbox
         -- randomise the gearbox. Example:
@@ -206,8 +268,6 @@ local function loadCars()
         cars[i].gearbox[6] = {}
         cars[i].gearbox[6][1] = love.math.random(20, 22)
         cars[i].gearbox[6][2] = love.math.random(29, 31)
-
-        print(inspect(cars[i].gearbox))
     end
 
     -- load the ghost history, if there is one
@@ -426,17 +486,17 @@ local function executeLegalMove(carindex, desiredcell)
     end
 
     if currentplayer > 1 then
-        pausetimer = 2			-- seconds
+        pausetimer = 1.5			-- seconds
     end
 
     if cars[carindex].movesleft < 1 then
+        cars[carindex].turns = cars[carindex].turns + 1
         incCurrentPlayer()
     end
 end
 
 local function botSelectGear(botnumber)
     local rnd = love.math.random(-1, 1)
-    print("Rnd: " .. rnd)
     local result = cars[botnumber].gear + rnd
     if result < 1 then result = 1 end
     if result > 6 then result = 6 end
@@ -462,7 +522,6 @@ end
 local function moveBots()
     cars[currentplayer].gear = botSelectGear(currentplayer)
     botMoves(currentplayer)
-    -- incCurrentPlayer()
 end
 
 local function drawGearStick(currentgear)
