@@ -73,14 +73,18 @@ local function incCurrentPlayer()
     -- iterate through loop and get the number of turns used + distance to finish at same time and then sort
     local players = {}
     for i = 1, numofcars do
-        players[i] = {}
-        players[i].turns = cars[i].turns
-        if cars[i].isOffGrid then
-            players[i].distance = getDistanceToFinish(cars[i].cell, false)      -- car is offgrid. Don't ignore the next finish line
+        if cars[i].isEliminated then
+            -- skip this car so it never becomes the current player
         else
-            players[i].distance = getDistanceToFinish(cars[i].cell, true)
+            players[i] = {}
+            players[i].turns = cars[i].turns
+            if cars[i].isOffGrid then
+                players[i].distance = getDistanceToFinish(cars[i].cell, false)      -- car is offgrid. Don't ignore the next finish line
+            else
+                players[i].distance = getDistanceToFinish(cars[i].cell, true)
+            end
+            players[i].carindex = i
         end
-        players[i].carindex = i
     end
 
     print("")
@@ -107,7 +111,7 @@ local function incCurrentPlayer()
     print("Car #" .. currentplayer .. " has taken " .. players[1].turns .. " turns and is " .. players[1].distance .. " from the finish so will move now.")
     -- print("Current player is now #" .. currentplayer)
 
-    numberofturns = numberofturns + 1
+    numberofturns = numberofturns + 1       --!
 end
 
 local function unselectAllCells()
@@ -559,14 +563,10 @@ local function applyMoves(carindex)
     end
 end
 
-local function botMoves(botnumber)
-    addCarMoves(botnumber)       -- assumes the gear has been set
-    applyMoves(botnumber)
-end
-
 local function moveBots()
     cars[currentplayer].gear = botSelectGear(currentplayer)
-    botMoves(currentplayer)
+    addCarMoves(currentplayer)       -- assumes the gear has been set
+    applyMoves(currentplayer)
 end
 
 local function drawGearStick(currentgear)
