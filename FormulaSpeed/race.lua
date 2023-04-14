@@ -26,23 +26,17 @@ local function getDistanceToFinish(startcell)
 	-- count the number of cells between the provided cell and the finish line
 	-- does NOT check for a clear path. Just measures raw distance
 	-- NOTE: this function doesn't try to find the shortest path meaning it is not very efficient (or accurate)
-	-- NOTE: gives incorrect results for cars on the grid and not yet crossed the line.
+	-- NOTE: gives incorrect results for cars on the grid and not yet crossed the line.        --!
 
 	local result       -- number
     local nextcell
 	currentcell = startcell
-    -- print("alpha")
-    -- print("Current cell = " .. currentcell)
-    -- print(inspect(racetrack[currentcell].link))
     for k, v in pairs(racetrack[currentcell].link) do
-        print("Available link:", k, v)
         if v == true then
             nextcell = k
             break       -- just need the first one
         end
     end
-
-    print("Next cell = " .. nextcell)
 
 	if racetrack[nextcell].isFinish then
 		result = 1
@@ -51,8 +45,7 @@ local function getDistanceToFinish(startcell)
 		result = 1 + getDistanceToFinish(nextcell)
 		return result
 	end
-
-	error("Not sure this code should ever execute.")
+	error("Not sure this code should ever execute.", 48)
 end
 
 local function incCurrentPlayer()
@@ -60,17 +53,42 @@ local function incCurrentPlayer()
 
     -- find the car with the least number of turns
     -- if more than one then find car closest to the finish line
-    -- print(currentplayer)
-    -- print(cars[currentplayer].cell)
-    local cellcount = getDistanceToFinish(cars[currentplayer].cell)
-    -- print(cellcount)
-    print("Car #" .. currentplayer .. " distance to finish = " .. getDistanceToFinish(cars[currentplayer].cell))
 
-    currentplayer = currentplayer + 1
-    if currentplayer > numofcars then
-        currentplayer = 1
-        numberofturns = numberofturns + 1
+    -- iterate through loop and get the number of turns used + distance to finish at same time and then sort
+    local players = {}
+    for i = 1, numofcars do
+        players[i] = {}
+        players[i].turns = cars[i].turns
+        players[i].distance = getDistanceToFinish(cars[i].cell)
+        players[i].carindex = i
     end
+
+    print("")
+    print("About to sort this table:")
+    print(inspect(players))
+
+    table.sort(players, function(k1, k2)
+        if k1.turns < k2.turns then
+            return true
+        elseif k1.turns == k2.turns and k1.distance <= k2.distance then
+            return true
+        elseif k1.turns > k2.turns then
+            return false
+        elseif k1.turns == k2.turns and k1.distance > k2.distance then
+            return false
+        elseif k1.turns == k2.turns and k1.distance == k2.distance then
+            return false
+        else
+            error("bad sort", 80)
+        end
+    end)
+
+    currentplayer = players[1].carindex
+    print("Car #" .. currentplayer .. " has taken " .. players[1].turns .. " turns and is " .. players[1].distance .. " from the finish so will move now.")
+    -- print("Current player is now #" .. currentplayer)
+
+    numberofturns = numberofturns + 1
+
 end
 
 local function unselectAllCells()
@@ -138,24 +156,27 @@ local function findClearPath(stack, fromcell, movesleft)
 	-- local stack = {}
 	local currentcell = fromcell
 	local stepsneeded = movesleft
-    print("Car looking " .. movesleft .. " moves ahead")
+    print("Car at cell#" .. currentcell .. " about to look for a valid link")
 	for k, v in pairs(racetrack[currentcell].link) do
-        local nextrandomcell = k		-- k is the cell number of the link
-		if isCellClear(nextrandomcell) then
-            table.insert(stack, nextrandomcell)
-			stepsneeded = stepsneeded - 1
-            if stepsneeded < 1 then
-                -- job done
-                return stack
-            else
-                -- steps not exhausted yet. Keep going
-                stack = findClearPath(stack, nextrandomcell, stepsneeded)
-                return stack
+        if v == true then       -- ensure the link is valid/real
+            local nextrandomcell = k		-- k is the cell number of the link
+    		if isCellClear(nextrandomcell) then
+                table.insert(stack, nextrandomcell)
+    			stepsneeded = stepsneeded - 1
+                if stepsneeded < 1 then
+                    -- job done
+                    return stack
+                else
+                    -- steps not exhausted yet. Keep going
+                    stack = findClearPath(stack, nextrandomcell, stepsneeded)
+                    return stack
+                end
             end
         end
     end
     print("I think car is blocked and all links exhausted. Maybe?")     --!
-    return stack
+    stepsneeded = 0
+    -- return stack
 end
 
 local function removeLinksToCell(cell)
@@ -199,7 +220,6 @@ local function loadRaceTrack()
     else
         print("Track knowledge loaded.")
     end
-
 end
 
 local function loadCars()
@@ -238,6 +258,7 @@ local function loadCars()
         cars[i].overshootcount = 0              -- used for special rule when wptyres == 0
         cars[i].log = {}
         cars[i].turns = 0                       -- how many turns taken
+        cars[i].isOffGrid = false               -- set to true on first corner to see if car has moved off grid
 
         -- gearbox
         -- randomise the gearbox. Example:
@@ -356,6 +377,11 @@ local function executeLegalMove(carindex, desiredcell)
     cars[carindex].cell = desiredcell
     cars[carindex].movesleft = cars[carindex].movesleft - 1
 
+    -- if on a corner then note car must have left the starting grid
+    if racetrack[cars[carindex].cell].isCorner then
+        cars[carindex].isOffGrid = true
+    end
+
     -- if ending turn in corner then give credit for the braking
     if cars[carindex].movesleft < 1 then
         -- end of turn
@@ -373,7 +399,8 @@ local function executeLegalMove(carindex, desiredcell)
         cars[carindex].log[desiredcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
 
         -- give credit for braking in corner
-        if racetrack[desiredcell].isCorner then
+        print("Checking if desired cell# " .. desiredcell .. " is a corner")
+        if racetrack[desiredcell].isCorner then     -- desired cell is actually current cell
             cars[carindex].brakestaken = cars[carindex].brakestaken + 1
         end
 
@@ -451,38 +478,37 @@ local function executeLegalMove(carindex, desiredcell)
     checkForElimination(carindex)      -- carindex
 
     -- count the number of laps completed
-    if racetrack[cars[carindex].cell].isFinish then
-        if numberofturns > 5 then          -- arbitrary value
-            -- WIN!
-            print("Lap time = " .. numberofturns)
-            lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
+    if racetrack[cars[carindex].cell].isFinish and cars[carindex].isOffGrid == true then
+        -- WIN!
+        print("Lap time = " .. numberofturns)
+        lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
 
-            -- see if history should replace the ghost
-            if ghost == nil or numberofturns < #ghost then
-                fileops.saveGhost(history[carindex])
-            end
+        -- see if history should replace the ghost
+        if ghost == nil or numberofturns < #ghost then
+            fileops.saveGhost(history[carindex])
+        end
 
-            -- update the bot AI
-            -- use the cars log to update the bots knowledge of the race track
-            -- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
-            --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
-            -- these two things gives the bot AI something to strive for when selecting gears
-            for k, v in pairs(cars[carindex].log) do
-                if trackknowledge == nil then trackknowledge = {} end
-                if trackknowledge[k] == nil then trackknowledge[k] = {} end
-                if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
-                    if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
-                        -- this log has a faster time than previously recorded
-                        -- update track knowledge with this new information
-                        trackknowledge[k].besttime = numberofturns
-                        trackknowledge[k].moves = v.moves
-                    end
+        -- update the bot AI
+        -- use the cars log to update the bots knowledge of the race track
+        -- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
+        --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
+        -- these two things gives the bot AI something to strive for when selecting gears
+        for k, v in pairs(cars[carindex].log) do
+            if trackknowledge == nil then trackknowledge = {} end
+            if trackknowledge[k] == nil then trackknowledge[k] = {} end
+            if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
+                if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
+                    -- this log has a faster time than previously recorded
+                    -- update track knowledge with this new information
+                    trackknowledge[k].besttime = numberofturns
+                    trackknowledge[k].moves = v.moves
                 end
             end
-            local success = fileops.saveTrackKnowledge(trackknowledge)
-            print("Knowledge save success: " .. tostring(success))
-            print(inspect(trackknowledge))
         end
+        local success = fileops.saveTrackKnowledge(trackknowledge)
+        print("Knowledge save success: " .. tostring(success))
+        print(inspect(trackknowledge))
+
     end
 
     if currentplayer > 1 then
@@ -507,7 +533,7 @@ local function applyMoves(carindex)
 
     local path = {}
     path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
-    while #path > 0 do
+    while path ~= nil and #path > 0 do
         local desiredcell = path[1]
         executeLegalMove(carindex, desiredcell)
         table.remove(path, 1)
@@ -1094,3 +1120,16 @@ function race.update(dt)
 end
 
 return race
+
+
+-- table.sort(players, function(k1, k2)
+--     if k1.turns > k2.turns then
+--         return false
+--     elseif k1.turns <= k2.turns and k1.distance <= k2.distance then
+--         return true
+--     elseif k1.turns <= k2.turns and k1.distance > k2.distance then
+--         return false
+--     else
+--         return false
+--     end
+-- end)
