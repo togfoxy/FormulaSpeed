@@ -20,6 +20,7 @@ local previouscell = nil                -- previous cell placed during link comm
 local numberofturns = 0
 local diceroll = nil                    -- this is the number of moves allocated when choosing a gear.
 local currentplayer = 1                 -- value from 1 -> numofcars
+local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
 local function incCurrentPlayer()
     -- operates on global. Returns nothing.
@@ -424,6 +425,10 @@ local function executeLegalMove(carindex, desiredcell)
         end
     end
 
+    if currentplayer > 1 then
+        pausetimer = 2			-- seconds
+    end
+
     if cars[carindex].movesleft < 1 then
         incCurrentPlayer()
     end
@@ -821,7 +826,6 @@ function race.draw()
         else
             love.graphics.setColor(1,1,1,1)     -- white
         end
-        -- love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
         love.graphics.draw(CARIMAGE[i], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
     end
 
@@ -1015,8 +1019,13 @@ function race.update(dt)
         cam:setPos(TRANSLATEX, TRANSLATEY)
     end
 
+    pausetimer = pausetimer - dt
+    if pausetimer < 0 then pausertimer = 0 end
+
     if currentplayer > 1 then
-        moveBots()
+        if pausetimer <= 0 then
+            moveBots()
+        end
     end
 
     lovelyToasts.update(dt)
