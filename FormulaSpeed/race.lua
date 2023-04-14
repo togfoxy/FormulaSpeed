@@ -76,14 +76,16 @@ local function incCurrentPlayer()
         if cars[i].isEliminated then
             -- skip this car so it never becomes the current player
         else
-            players[i] = {}
-            players[i].turns = cars[i].turns
+            thisplayer = {}
+            thisplayer.turns = cars[i].turns
             if cars[i].isOffGrid then
-                players[i].distance = getDistanceToFinish(cars[i].cell, false)      -- car is offgrid. Don't ignore the next finish line
+                thisplayer.distance = getDistanceToFinish(cars[i].cell, false)      -- car is offgrid. Don't ignore the next finish line
             else
-                players[i].distance = getDistanceToFinish(cars[i].cell, true)
+                thisplayer.distance = getDistanceToFinish(cars[i].cell, true)
             end
-            players[i].carindex = i
+            thisplayer.carindex = 1
+
+            table.insert(players, thisplayer)
         end
     end
 
@@ -449,9 +451,9 @@ local function executeLegalMove(carindex, desiredcell)
                     -- different set of rules
                     if cars[carindex].wptyres > cars[carindex].movesleft then
                         -- normal overshoot. The + 1 here is applied because this logic happens after the move has been deducted
-                        lovelyToasts.show(cars[carindex].movesleft + 1 .. " tyre points used", 15, "middle")
+                        lovelyToasts.show((cars[carindex].movesleft + 1) .. " tyre points used", 15, "middle")
                         cars[carindex].wptyres = cars[carindex].wptyres - cars[carindex].movesleft + 1
-                    elseif cars[carindex].wptyres == cars[carindex].movesleft + 1 then
+                    elseif cars[carindex].wptyres == (cars[carindex].movesleft + 1) then
                         -- spin
                         cars[carindex].wptyres = 0
                         cars[carindex].isSpun = true
@@ -465,9 +467,9 @@ local function executeLegalMove(carindex, desiredcell)
                     end
                 elseif cars[carindex].wptyres == 0 then
                     -- special rules when wptyres == 0
-                    if cars[carindex].movesleft + 1 == 1 then  -- oveshoot on zero tyres has an odd rule
+                    if (cars[carindex].movesleft + 1) == 1 then  -- oveshoot on zero tyres has an odd rule
                         cars[carindex].overshootcount = cars[carindex].overshootcount + 1
-                        casr[1].isSpun = true
+                        casr[carindex].isSpun = true
                         cars[carindex].gear = 0
 
                         if cars[carindex].overshootcount > 2 then
@@ -476,7 +478,7 @@ local function executeLegalMove(carindex, desiredcell)
                             cars[carindex].isEliminated = true
                             cars[carindex].isSpun = true
                         end
-                    elseif cars[carindex].movesleft + 1 > 1 then
+                    elseif (cars[carindex].movesleft + 1) > 1 then
                         -- crash
                         print("Crashed. Overshoot > 1 while out of tyre wear points")
                         cars[carindex].isEliminated = true
