@@ -821,7 +821,8 @@ function race.draw()
         else
             love.graphics.setColor(1,1,1,1)     -- white
         end
-        love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
+        -- love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
+        love.graphics.draw(CARIMAGE[i], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
     end
 
     -- draw number of moves left beside the mouse

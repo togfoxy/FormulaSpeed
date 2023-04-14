@@ -19,7 +19,9 @@ function constants.load()
     SOUND_TOGGLE = true
 
     IMAGE = {}
+    CARIMAGE = {}
     FONT = {}
+
 
     cam = nil       -- camera
 
