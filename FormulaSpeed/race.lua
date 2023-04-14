@@ -22,9 +22,22 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
-local function getDistanceToFinish(startcell)
+local function allCarsLeftGrid()
+    -- returns true if all cars have entered the first corner
+    for i = 1, numofcars do
+        if not cars[i].isOffGrid then
+            return false
+        end
+    end
+    return true
+end
+
+local function getDistanceToFinish(startcell, ignoreFirstFinish)
 	-- count the number of cells between the provided cell and the finish line
 	-- does NOT check for a clear path. Just measures raw distance
+    -- input: startcell = starting cell
+    -- input: ignoreFirstFinish = set to TRUE when the car is still on the grid and the first crossing of the finish
+    --          line needs to be ignored
 	-- NOTE: this function doesn't try to find the shortest path meaning it is not very efficient (or accurate)
 	-- NOTE: gives incorrect results for cars on the grid and not yet crossed the line.        --!
 
@@ -38,11 +51,14 @@ local function getDistanceToFinish(startcell)
         end
     end
 
-	if racetrack[nextcell].isFinish then
+	if racetrack[nextcell].isFinish and not ignoreFirstFinish then
 		result = 1
 		return result
+    elseif racetrack[nextcell].isFinish and ignoreFirstFinish then
+        result = 1 + getDistanceToFinish(nextcell, false)       -- continue recursing with the FALSE flag
+        return result
 	else
-		result = 1 + getDistanceToFinish(nextcell)
+		result = 1 + getDistanceToFinish(nextcell, ignoreFirstFinish)
 		return result
 	end
 	error("Not sure this code should ever execute.", 48)
@@ -59,7 +75,11 @@ local function incCurrentPlayer()
     for i = 1, numofcars do
         players[i] = {}
         players[i].turns = cars[i].turns
-        players[i].distance = getDistanceToFinish(cars[i].cell)
+        if cars[i].isOffGrid then
+            players[i].distance = getDistanceToFinish(cars[i].cell, false)      -- car is offgrid. Don't ignore the next finish line
+        else
+            players[i].distance = getDistanceToFinish(cars[i].cell, true)
+        end
         players[i].carindex = i
     end
 
@@ -70,7 +90,7 @@ local function incCurrentPlayer()
     table.sort(players, function(k1, k2)
         if k1.turns < k2.turns then
             return true
-        elseif k1.turns == k2.turns and k1.distance <= k2.distance then
+        elseif k1.turns == k2.turns and k1.distance < k2.distance then
             return true
         elseif k1.turns > k2.turns then
             return false
@@ -88,7 +108,6 @@ local function incCurrentPlayer()
     -- print("Current player is now #" .. currentplayer)
 
     numberofturns = numberofturns + 1
-
 end
 
 local function unselectAllCells()
