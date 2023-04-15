@@ -226,7 +226,7 @@ local function findClearPath(stack, fromcell, movesleft)
 	-- local stack = {}
 	local currentcell = fromcell
 	local stepsneeded = movesleft
-    print("Car at cell#" .. currentcell .. " about to look for a valid link")
+    -- print("Car at cell#" .. currentcell .. " about to look for a valid link")
 	for k, v in pairs(racetrack[currentcell].link) do
         if v == true then       -- ensure the link is valid/real
             local nextrandomcell = k		-- k is the cell number of the link
@@ -299,37 +299,38 @@ local function loadCars()
         cars[i] = {}
         history[i] = {}         -- tracks the history for this race only
 
-        -- if i == 1 then
-        --     cars[i].cell = 1
-        -- elseif i == 2 then
-        --     cars[i].cell = 435
-        -- elseif i == 3 then
-        --     cars[i].cell = 162
-        -- elseif i == 4 then
-        --     cars[i].cell = 432
-        -- elseif i == 5 then
-        --     cars[i].cell = 159
-        -- elseif i == 6 then
-        --     cars[i].cell = 429
-        -- else
-        --     error("Too many cars loaded.", 148)
-        -- end
-
         if i == 1 then
-            cars[i].cell = 164
+            cars[i].cell = 1
         elseif i == 2 then
-            cars[i].cell = 448
-        elseif i == 3 then
             cars[i].cell = 435
+        elseif i == 3 then
+            cars[i].cell = 162
         elseif i == 4 then
-            cars[i].cell = 163
+            cars[i].cell = 432
         elseif i == 5 then
-            cars[i].cell = 447
+            cars[i].cell = 159
         elseif i == 6 then
-            cars[i].cell = 434
+            cars[i].cell = 429
         else
             error("Too many cars loaded.", 148)
         end
+
+        -- ** debugging: tight grid to test blocking **
+        -- if i == 1 then
+        --     cars[i].cell = 164
+        -- elseif i == 2 then
+        --     cars[i].cell = 448
+        -- elseif i == 3 then
+        --     cars[i].cell = 435
+        -- elseif i == 4 then
+        --     cars[i].cell = 163
+        -- elseif i == 5 then
+        --     cars[i].cell = 447
+        -- elseif i == 6 then
+        --     cars[i].cell = 434
+        -- else
+        --     error("Too many cars loaded.", 148)
+        -- end
 
 
         cars[i].gear = 0
@@ -504,8 +505,9 @@ local function executeLegalMove(carindex, desiredcell)
             -- overshoot
             if brakescore >= 2 then
                 -- elimination
-                print("Crashed out")
                 cars[carindex].isEliminated = true
+                local txt = "Car #" .. carindex .. " ignored yellow flag and is eliminated"
+                lovelyToasts.show(txt, 10, "middle")
             else
                 -- see how many cells was overshot
                 -- some complex rules about spinning etc
@@ -513,17 +515,20 @@ local function executeLegalMove(carindex, desiredcell)
                     -- different set of rules
                     if cars[carindex].wptyres > cars[carindex].movesleft then
                         -- normal overshoot. The + 1 here is applied because this logic happens after the move has been deducted
-                        lovelyToasts.show((cars[carindex].movesleft + 1) .. " tyre points used", 15, "middle")
+                        local txt = "Car #" .. carindex .. " used " .. (cars[carindex].movesleft + 1) .. " tyre points"
+                        lovelyToasts.show(txt, 10, "middle")
                         cars[carindex].wptyres = cars[carindex].wptyres - cars[carindex].movesleft + 1
                     elseif cars[carindex].wptyres == (cars[carindex].movesleft + 1) then
                         -- spin
                         cars[carindex].wptyres = 0
                         cars[carindex].isSpun = true
                         cars[carindex].gear = 0
-                        lovelyToasts.show("0 tyre points left. Car spun", 15, "middle")
+                        local txt = "Car #" .. carindex .. " has no tyre points left. Car has spun"
+                        lovelyToasts.show(txt, 10, "middle")
                     elseif cars[carindex].movesleft + 1 > cars[carindex].wptyres then
                         -- crash out
-                        print("Crashed. Overshoot is greater than tyre wear points")
+                        txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is greater than tyre wear points")
+                        lovelyToasts.show(txt, 10, "middle")
                         cars[carindex].isEliminated = true
                         cars[carindex].isSpun = true
                     end
@@ -536,13 +541,15 @@ local function executeLegalMove(carindex, desiredcell)
 
                         if cars[carindex].overshootcount > 2 then
                             -- crash out
-                            print("Crashed. Overshoot > 2 while out of tyre wear points")
+                            txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is > 2 while out of tyre wear points")
+                            lovelyToasts.show(txt, 10, "middle")
                             cars[carindex].isEliminated = true
                             cars[carindex].isSpun = true
                         end
                     elseif (cars[carindex].movesleft + 1) > 1 then
                         -- crash
-                        print("Crashed. Overshoot > 1 while out of tyre wear points")
+                        txt = ("Car #" .. carindex .. " has crashed. Overshoot amount > 1 while out of tyre wear points")
+                        lovelyToasts.show(txt, 10, "middle")
                         cars[carindex].isEliminated = true
                         cars[carindex].isSpun = true
                     else
@@ -556,7 +563,7 @@ local function executeLegalMove(carindex, desiredcell)
         cars[carindex].brakestaken = 0     -- reset for next corner
     end
 
-    checkForElimination(carindex)      -- carindex
+    -- checkForElimination(carindex)      -- carindex
 
     -- count the number of laps completed
     if racetrack[cars[carindex].cell].isFinish and cars[carindex].isOffGrid == true then
@@ -614,8 +621,8 @@ local function applyMoves(carindex)
 
     local path = {}
     path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
-    print("Found a path:")
-    print(inspect(path))
+    -- print("Found a path:")
+    -- print(inspect(path))
 
     -- path can be nil if the car gets blocked
     if #path == 0 then

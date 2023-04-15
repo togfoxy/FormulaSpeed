@@ -107,6 +107,7 @@ function love.load()
 	love.keyboard.setKeyRepeat(true)
 
 	lovelyToasts.options.tapToDismiss = true
+	lovelyToasts.options.queueEnabled = true
 
 end
 
