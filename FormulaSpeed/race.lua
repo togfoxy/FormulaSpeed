@@ -63,7 +63,7 @@ local function getDistanceToFinish(startcell, ignoreFirstFinish)
 	-- NOTE: this function doesn't try to find the shortest path meaning it is not very efficient (or accurate)
 	-- NOTE: gives incorrect results for cars on the grid and not yet crossed the line.        --!
 
-    print("Cell #" .. startcell, ignoreFirstFinish)
+    -- print("Cell #" .. startcell, ignoreFirstFinish)
 
 	local result       -- number
     local nextcell
@@ -80,20 +80,20 @@ local function getDistanceToFinish(startcell, ignoreFirstFinish)
         -- current cell is on the finish and is about to leave/cross the finish
         if not ignoreFirstFinish then
             result = 1
-            print("Found the finish line on cell #" .. nextcell .. " so returning result:" .. result)
+            -- print("Found the finish line on cell #" .. nextcell .. " so returning result:" .. result)
             return result
         elseif ignoreFirstFinish then
-            print("Found finish on cell #" .. nextcell .. " but ignoring. Moving on to cell #" .. nextcell)
+            -- print("Found finish on cell #" .. nextcell .. " but ignoring. Moving on to cell #" .. nextcell)
             result = 1 + getDistanceToFinish(nextcell, false)       -- continue recursing with the FALSE flag
             return result
         else
-            print("Continuing search alpha. Will use default parameters. Moving on to cell #" .. nextcell)
+            -- print("Continuing search alpha. Will use default parameters. Moving on to cell #" .. nextcell)
             result = 1 + getDistanceToFinish(nextcell, ignoreFirstFinish)
             return result
         end
     else
         -- not crossing the line. Continue counting
-        print("Continuing search beta. Will use default parameters. Moving on to cell #" .. nextcell)
+        -- print("Continuing search beta. Will use default parameters. Moving on to cell #" .. nextcell)
         result = 1 + getDistanceToFinish(nextcell, ignoreFirstFinish)
         return result
     end
@@ -114,21 +114,21 @@ local function incCurrentPlayer()
         else
             thisplayer = {}
             thisplayer.turns = cars[i].turns
-            print("Getting distance for car #" .. i)
+            -- print("Getting distance for car #" .. i)
             if cars[i].isOffGrid then
                 thisplayer.distance = getDistanceToFinish(cars[i].cell, false)      -- car is offgrid. Don't ignore the next finish line
             else
                 thisplayer.distance = getDistanceToFinish(cars[i].cell, true)
             end
             thisplayer.carindex = i
-            print("Distance determined to be " .. thisplayer.distance )
+            -- print("Distance determined to be " .. thisplayer.distance )
             table.insert(players, thisplayer)
         end
     end
 
-    print("")
-    print("About to sort this table:")
-    print(inspect(players))
+    -- print("")
+    -- print("About to sort this table:")
+    -- print(inspect(players))
 
     table.sort(players, function(k1, k2)
         if k1.turns < k2.turns then
@@ -147,7 +147,7 @@ local function incCurrentPlayer()
     end)
 
     currentplayer = players[1].carindex
-    print("Car #" .. currentplayer .. " has taken " .. players[1].turns .. " turns and is " .. players[1].distance .. " from the finish so will move now.")
+    -- print("Car #" .. currentplayer .. " has taken " .. players[1].turns .. " turns and is " .. players[1].distance .. " from the finish so will move now.")
     -- print("Current player is now #" .. currentplayer)
 
     -- see if every car has had a turn. If so then set number of turns
@@ -226,7 +226,7 @@ local function findClearPath(stack, fromcell, movesleft)
 	-- local stack = {}
 	local currentcell = fromcell
 	local stepsneeded = movesleft
-    print("Car at cell#" .. currentcell .. " about to look for a valid link")
+    -- print("Car at cell#" .. currentcell .. " about to look for a valid link")
 	for k, v in pairs(racetrack[currentcell].link) do
         if v == true then       -- ensure the link is valid/real
             local nextrandomcell = k		-- k is the cell number of the link
@@ -246,7 +246,8 @@ local function findClearPath(stack, fromcell, movesleft)
     end
     print("I think car is blocked and all links exhausted. Maybe?")     --!
     stepsneeded = 0
-    return stack
+    return {}       -- a signal that a path could not be found
+    -- return stack
 end
 
 local function removeLinksToCell(cell)
@@ -313,6 +314,24 @@ local function loadCars()
         else
             error("Too many cars loaded.", 148)
         end
+
+        -- ** debugging: tight grid to test blocking **
+        -- if i == 1 then
+        --     cars[i].cell = 164
+        -- elseif i == 2 then
+        --     cars[i].cell = 448
+        -- elseif i == 3 then
+        --     cars[i].cell = 435
+        -- elseif i == 4 then
+        --     cars[i].cell = 163
+        -- elseif i == 5 then
+        --     cars[i].cell = 447
+        -- elseif i == 6 then
+        --     cars[i].cell = 434
+        -- else
+        --     error("Too many cars loaded.", 148)
+        -- end
+
 
         cars[i].gear = 0
         cars[i].wptyres = 6
@@ -486,8 +505,9 @@ local function executeLegalMove(carindex, desiredcell)
             -- overshoot
             if brakescore >= 2 then
                 -- elimination
-                print("Crashed out")
                 cars[carindex].isEliminated = true
+                local txt = "Car #" .. carindex .. " ignored yellow flag and is eliminated"
+                lovelyToasts.show(txt, 10, "middle")
             else
                 -- see how many cells was overshot
                 -- some complex rules about spinning etc
@@ -495,17 +515,20 @@ local function executeLegalMove(carindex, desiredcell)
                     -- different set of rules
                     if cars[carindex].wptyres > cars[carindex].movesleft then
                         -- normal overshoot. The + 1 here is applied because this logic happens after the move has been deducted
-                        lovelyToasts.show((cars[carindex].movesleft + 1) .. " tyre points used", 15, "middle")
+                        local txt = "Car #" .. carindex .. " used " .. (cars[carindex].movesleft + 1) .. " tyre points"
+                        lovelyToasts.show(txt, 10, "middle")
                         cars[carindex].wptyres = cars[carindex].wptyres - cars[carindex].movesleft + 1
                     elseif cars[carindex].wptyres == (cars[carindex].movesleft + 1) then
                         -- spin
                         cars[carindex].wptyres = 0
                         cars[carindex].isSpun = true
                         cars[carindex].gear = 0
-                        lovelyToasts.show("0 tyre points left. Car spun", 15, "middle")
+                        local txt = "Car #" .. carindex .. " has no tyre points left. Car has spun"
+                        lovelyToasts.show(txt, 10, "middle")
                     elseif cars[carindex].movesleft + 1 > cars[carindex].wptyres then
                         -- crash out
-                        print("Crashed. Overshoot is greater than tyre wear points")
+                        txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is greater than tyre wear points")
+                        lovelyToasts.show(txt, 10, "middle")
                         cars[carindex].isEliminated = true
                         cars[carindex].isSpun = true
                     end
@@ -518,13 +541,15 @@ local function executeLegalMove(carindex, desiredcell)
 
                         if cars[carindex].overshootcount > 2 then
                             -- crash out
-                            print("Crashed. Overshoot > 2 while out of tyre wear points")
+                            txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is > 2 while out of tyre wear points")
+                            lovelyToasts.show(txt, 10, "middle")
                             cars[carindex].isEliminated = true
                             cars[carindex].isSpun = true
                         end
                     elseif (cars[carindex].movesleft + 1) > 1 then
                         -- crash
-                        print("Crashed. Overshoot > 1 while out of tyre wear points")
+                        txt = ("Car #" .. carindex .. " has crashed. Overshoot amount > 1 while out of tyre wear points")
+                        lovelyToasts.show(txt, 10, "middle")
                         cars[carindex].isEliminated = true
                         cars[carindex].isSpun = true
                     else
@@ -538,7 +563,7 @@ local function executeLegalMove(carindex, desiredcell)
         cars[carindex].brakestaken = 0     -- reset for next corner
     end
 
-    checkForElimination(carindex)      -- carindex
+    -- checkForElimination(carindex)      -- carindex
 
     -- count the number of laps completed
     if racetrack[cars[carindex].cell].isFinish and cars[carindex].isOffGrid == true then
@@ -574,14 +599,14 @@ local function executeLegalMove(carindex, desiredcell)
 
     end
 
-    if currentplayer > 1 then
+    if currentplayer ~= 1 then
         pausetimer = 1.5			-- seconds
     end
 
-    if cars[carindex].movesleft < 1 then
-        cars[carindex].turns = cars[carindex].turns + 1
-        incCurrentPlayer()
-    end
+    -- if cars[carindex].movesleft < 1 then
+    --     cars[carindex].turns = cars[carindex].turns + 1
+    --     incCurrentPlayer()
+    -- end
 end
 
 local function botSelectGear(botnumber)
@@ -596,10 +621,25 @@ local function applyMoves(carindex)
 
     local path = {}
     path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
-    while path ~= nil and #path > 0 do
-        local desiredcell = path[1]
-        executeLegalMove(carindex, desiredcell)
-        table.remove(path, 1)
+    -- print("Found a path:")
+    -- print(inspect(path))
+
+    -- path can be nil if the car gets blocked
+    if #path == 0 then
+        -- path is blocked. Abort turn and move to next player
+        cars[carindex].turns = cars[carindex].turns + 1     -- need to inc this count so that this car is not simply selected again
+        incCurrentPlayer()
+    else
+        -- path not blocked. execute move and move to next player
+        while path ~= nil and #path > 0 do
+            local desiredcell = path[1]
+            executeLegalMove(carindex, desiredcell)
+            if cars[carindex].movesleft < 1 then
+                cars[carindex].turns = cars[carindex].turns + 1
+                incCurrentPlayer()
+            end
+            table.remove(path, 1)
+        end
     end
 end
 
@@ -857,6 +897,10 @@ function race.mousereleased(rx, ry, x, y, button)
                         if racetrack[currentcell].link[desiredcell] == true then
                             -- move is legal
                             executeLegalMove(1, desiredcell)
+                            if cars[1].movesleft < 1 then
+                                cars[1].turns = cars[1].turns + 1
+                                incCurrentPlayer()
+                            end
                         end
                     else
                         -- no desired cell. Do nothing. Move not legal
