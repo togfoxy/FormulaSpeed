@@ -1042,11 +1042,18 @@ function race.draw()
             drawx, drawy = love.mouse.getPosition()
             drawx, drawy = cam:toWorld(drawx, drawy)
 
+            love.graphics.setColor(1,1,1,1)     -- white
             if racetrack[cars[1].cell].isCorner then
                 --! make the move left counter change colours here
+                if cars[1].brakestaken >= racetrack[cars[1].cell].speedCheck then
+                    love.graphics.setColor(0,1,0,1)
+                else
+                    love.graphics.setColor(1,1,0,1)
+                end
+            else
+                love.graphics.setColor(1,1,1,1)     -- white
             end
 
-            love.graphics.setColor(1,1,1,1)     -- white
             love.graphics.setFont(FONT[enum.fontCorporate])
             love.graphics.print(cars[1].movesleft, drawx + 20, drawy - 5)
             love.graphics.setFont(FONT[enum.fontDefault])
