@@ -45,7 +45,7 @@ local function getForwardCornerCells(cell)
 end
 
 local function allCarsLeftGrid()
-    -- returns true if all cars have entered the first corner
+    -- returns true if all cars have crossed the finish line at least once
     for i = 1, numofcars do
         if not cars[i].isOffGrid then
             return false
@@ -63,27 +63,41 @@ local function getDistanceToFinish(startcell, ignoreFirstFinish)
 	-- NOTE: this function doesn't try to find the shortest path meaning it is not very efficient (or accurate)
 	-- NOTE: gives incorrect results for cars on the grid and not yet crossed the line.        --!
 
+    print("Cell #" .. startcell, ignoreFirstFinish)
+
 	local result       -- number
     local nextcell
 	currentcell = startcell
     for k, v in pairs(racetrack[currentcell].link) do
-        if v == true then
+        if v == true then       -- only count active links
             nextcell = k
-            break       -- just need the first one
+            break       -- just need the first link
         end
     end
 
-	if racetrack[nextcell].isFinish and not ignoreFirstFinish then
-		result = 1
-		return result
-    elseif racetrack[nextcell].isFinish and ignoreFirstFinish then
-        result = 1 + getDistanceToFinish(nextcell, false)       -- continue recursing with the FALSE flag
+    -- check to see if finish line is crossed
+    if racetrack[currentcell].isFinish and not racetrack[nextcell].isFinish then
+        -- current cell is on the finish and is about to leave/cross the finish
+        if not ignoreFirstFinish then
+            result = 1
+            print("Found the finish line on cell #" .. nextcell .. " so returning result:" .. result)
+            return result
+        elseif ignoreFirstFinish then
+            print("Found finish on cell #" .. nextcell .. " but ignoring. Moving on to cell #" .. nextcell)
+            result = 1 + getDistanceToFinish(nextcell, false)       -- continue recursing with the FALSE flag
+            return result
+        else
+            print("Continuing search alpha. Will use default parameters. Moving on to cell #" .. nextcell)
+            result = 1 + getDistanceToFinish(nextcell, ignoreFirstFinish)
+            return result
+        end
+    else
+        -- not crossing the line. Continue counting
+        print("Continuing search beta. Will use default parameters. Moving on to cell #" .. nextcell)
+        result = 1 + getDistanceToFinish(nextcell, ignoreFirstFinish)
         return result
-	else
-		result = 1 + getDistanceToFinish(nextcell, ignoreFirstFinish)
-		return result
-	end
-	error("Not sure this code should ever execute.", 48)
+    end
+	error("Not sure this code should ever execute.", 100)
 end
 
 local function incCurrentPlayer()
@@ -100,13 +114,14 @@ local function incCurrentPlayer()
         else
             thisplayer = {}
             thisplayer.turns = cars[i].turns
+            print("Getting distance for car #" .. i)
             if cars[i].isOffGrid then
                 thisplayer.distance = getDistanceToFinish(cars[i].cell, false)      -- car is offgrid. Don't ignore the next finish line
             else
                 thisplayer.distance = getDistanceToFinish(cars[i].cell, true)
             end
             thisplayer.carindex = i
-
+            print("Distance determined to be " .. thisplayer.distance )
             table.insert(players, thisplayer)
         end
     end
@@ -433,8 +448,8 @@ local function executeLegalMove(carindex, desiredcell)
     cars[carindex].cell = desiredcell
     cars[carindex].movesleft = cars[carindex].movesleft - 1
 
-    -- if on a corner then note car must have left the starting grid
-    if racetrack[cars[carindex].cell].isCorner then
+    if racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then
+        -- car was on the finish but moved off it. It is now 'off grid'
         cars[carindex].isOffGrid = true
     end
 
