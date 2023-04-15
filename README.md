@@ -46,11 +46,34 @@ Use left mouse button to select a gear.
 
 Use right moust button to select a cell in front of the race car.
 
+Hold milddle-mouse-button to move the camera.
+
 Use arrow keys to move the camera.   ( <- ^ -> v  )
 
 Use shift-arrow keys to move the camera faster.
 
-Uaw mouse-wheel to zomom in and out.
+Use mouse-wheel to zoom in and out.
+
+Use -/= to zoom in and out.
+
+Editor
+======
+
+Contains in-game editor that lets you change the track. Click 'e' to enter editor mode:
+
+- click any cell to highlight it
+- use mouse wheel to rotate a cell
+- right-click-drag between two cells to create a link (pathway). DIRECTION IS IMPORTANT
+- repeat the right-click-drag between two cells to remove the link
+- 'delete' key will remove a cell
+- 'c' key marks a cell as a corner. Do this for every cell in the corner.
+- 's' key sets the speed/stops on the corner. Do this for every cell in the corner.
+- 'f' key will mark the cell as a finish line
+- 'n' will add a new cell at the current mouse position
+- 'l' will add a new cell at the current mouse position AND link it to the previous cell
+
+- 'SHIFT-S' will save the track
+
 
 Roadmap
 =======
@@ -59,15 +82,11 @@ Audio.
 
 Implementation of more rules around braking, wrecks and road handling.
 
-Five additional bot cars.
-
 A campaign.
 
 A shop that lets you upgrade your car.
 
 A shop that lets you buy drivers.
-
-An editor that lets you create your own tracks.
 
 Better user interface/controls.
 
