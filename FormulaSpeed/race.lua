@@ -25,7 +25,7 @@ local pausetimer = 0 -- track time between bot moves so player can see what is h
 local function getForwardCornerCells(cell)
     -- used during editing. Return a table of all the corner cells in front of this one
     -- including this one
-
+    --! not yet working
     local stack = {}
     table.insert(stack, cell)
     for k, v in pairs(racetrack[cell].link) do
@@ -105,7 +105,7 @@ local function incCurrentPlayer()
             else
                 thisplayer.distance = getDistanceToFinish(cars[i].cell, true)
             end
-            thisplayer.carindex = 1
+            thisplayer.carindex = i
 
             table.insert(players, thisplayer)
         end
@@ -135,7 +135,15 @@ local function incCurrentPlayer()
     print("Car #" .. currentplayer .. " has taken " .. players[1].turns .. " turns and is " .. players[1].distance .. " from the finish so will move now.")
     -- print("Current player is now #" .. currentplayer)
 
-    numberofturns = numberofturns + 1       --!
+    -- see if every car has had a turn. If so then set number of turns
+    local turntable = {}
+    for i = 1, numofcars do
+        if not cars[i].isEliminated then
+            table.insert(turntable, cars[i].turns)
+        end
+    end
+    table.sort(turntable)
+    numberofturns = turntable[1]
 end
 
 local function unselectAllCells()
@@ -223,7 +231,7 @@ local function findClearPath(stack, fromcell, movesleft)
     end
     print("I think car is blocked and all links exhausted. Maybe?")     --!
     stepsneeded = 0
-    -- return stack
+    return stack
 end
 
 local function removeLinksToCell(cell)
@@ -740,15 +748,16 @@ function race.keyreleased(key, scancode)
                         racetrack[cell].speedCheck = nil
                     end
 
-                    -- map all corner cells in front of this cell as a speedcheck
-                    if racetrack[cell].isCorner then
-                        local cornercells = {}
-                        local newvalue = racetrack[cell].speedCheck
-                        cornercells = getForwardCornerCells(cell)
-                        for k, v in pairs(cornercells) do
-                        	racetrack[v].speedCheck = newvalue
-                        end
-                    end
+                    -- -- map all corner cells in front of this cell as a speedcheck
+                    --! not yet working. Stack overflow
+                    -- if racetrack[cell].isCorner then
+                    --     local cornercells = {}
+                    --     local newvalue = racetrack[cell].speedCheck
+                    --     cornercells = getForwardCornerCells(cell)
+                    --     for k, v in pairs(cornercells) do
+                    --     	racetrack[v].speedCheck = newvalue
+                    --     end
+                    -- end
                 end
             end
         end
