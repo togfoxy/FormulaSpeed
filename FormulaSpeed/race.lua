@@ -22,8 +22,30 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
+local function getForwardCornerCells(cell)
+    -- used during editing. Return a table of all the corner cells in front of this one
+    -- including this one
+    --! not yet working
+    local stack = {}
+    table.insert(stack, cell)
+    for k, v in pairs(racetrack[cell].link) do
+        if v == true then       -- k = cell number. v = true/false
+            if racetrack[k].isCorner then
+                -- local thiscell = getForwardCornerCells(k)
+                -- table.insert(stack, getForwardCornerCells(k))
+                local newstack = {}
+                newstack = getForwardCornerCells(k)
+                for q, w in pairs(newstack) do
+                    table.insert(stack, w)
+                end
+            end
+        end
+    end
+    return stack
+end
+
 local function allCarsLeftGrid()
-    -- returns true if all cars have entered the first corner
+    -- returns true if all cars have crossed the finish line at least once
     for i = 1, numofcars do
         if not cars[i].isOffGrid then
             return false
@@ -41,27 +63,41 @@ local function getDistanceToFinish(startcell, ignoreFirstFinish)
 	-- NOTE: this function doesn't try to find the shortest path meaning it is not very efficient (or accurate)
 	-- NOTE: gives incorrect results for cars on the grid and not yet crossed the line.        --!
 
+    print("Cell #" .. startcell, ignoreFirstFinish)
+
 	local result       -- number
     local nextcell
 	currentcell = startcell
     for k, v in pairs(racetrack[currentcell].link) do
-        if v == true then
+        if v == true then       -- only count active links
             nextcell = k
-            break       -- just need the first one
+            break       -- just need the first link
         end
     end
 
-	if racetrack[nextcell].isFinish and not ignoreFirstFinish then
-		result = 1
-		return result
-    elseif racetrack[nextcell].isFinish and ignoreFirstFinish then
-        result = 1 + getDistanceToFinish(nextcell, false)       -- continue recursing with the FALSE flag
+    -- check to see if finish line is crossed
+    if racetrack[currentcell].isFinish and not racetrack[nextcell].isFinish then
+        -- current cell is on the finish and is about to leave/cross the finish
+        if not ignoreFirstFinish then
+            result = 1
+            print("Found the finish line on cell #" .. nextcell .. " so returning result:" .. result)
+            return result
+        elseif ignoreFirstFinish then
+            print("Found finish on cell #" .. nextcell .. " but ignoring. Moving on to cell #" .. nextcell)
+            result = 1 + getDistanceToFinish(nextcell, false)       -- continue recursing with the FALSE flag
+            return result
+        else
+            print("Continuing search alpha. Will use default parameters. Moving on to cell #" .. nextcell)
+            result = 1 + getDistanceToFinish(nextcell, ignoreFirstFinish)
+            return result
+        end
+    else
+        -- not crossing the line. Continue counting
+        print("Continuing search beta. Will use default parameters. Moving on to cell #" .. nextcell)
+        result = 1 + getDistanceToFinish(nextcell, ignoreFirstFinish)
         return result
-	else
-		result = 1 + getDistanceToFinish(nextcell, ignoreFirstFinish)
-		return result
-	end
-	error("Not sure this code should ever execute.", 48)
+    end
+	error("Not sure this code should ever execute.", 100)
 end
 
 local function incCurrentPlayer()
@@ -78,13 +114,14 @@ local function incCurrentPlayer()
         else
             thisplayer = {}
             thisplayer.turns = cars[i].turns
+            print("Getting distance for car #" .. i)
             if cars[i].isOffGrid then
                 thisplayer.distance = getDistanceToFinish(cars[i].cell, false)      -- car is offgrid. Don't ignore the next finish line
             else
                 thisplayer.distance = getDistanceToFinish(cars[i].cell, true)
             end
-            thisplayer.carindex = 1
-
+            thisplayer.carindex = i
+            print("Distance determined to be " .. thisplayer.distance )
             table.insert(players, thisplayer)
         end
     end
@@ -113,7 +150,15 @@ local function incCurrentPlayer()
     print("Car #" .. currentplayer .. " has taken " .. players[1].turns .. " turns and is " .. players[1].distance .. " from the finish so will move now.")
     -- print("Current player is now #" .. currentplayer)
 
-    numberofturns = numberofturns + 1       --!
+    -- see if every car has had a turn. If so then set number of turns
+    local turntable = {}
+    for i = 1, numofcars do
+        if not cars[i].isEliminated then
+            table.insert(turntable, cars[i].turns)
+        end
+    end
+    table.sort(turntable)
+    numberofturns = turntable[1]
 end
 
 local function unselectAllCells()
@@ -201,7 +246,7 @@ local function findClearPath(stack, fromcell, movesleft)
     end
     print("I think car is blocked and all links exhausted. Maybe?")     --!
     stepsneeded = 0
-    -- return stack
+    return stack
 end
 
 local function removeLinksToCell(cell)
@@ -403,8 +448,8 @@ local function executeLegalMove(carindex, desiredcell)
     cars[carindex].cell = desiredcell
     cars[carindex].movesleft = cars[carindex].movesleft - 1
 
-    -- if on a corner then note car must have left the starting grid
-    if racetrack[cars[carindex].cell].isCorner then
+    if racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then
+        -- car was on the finish but moved off it. It is now 'off grid'
         cars[carindex].isOffGrid = true
     end
 
@@ -434,7 +479,6 @@ local function executeLegalMove(carindex, desiredcell)
     -- if leaving corner, see if correct number of stops made
     if racetrack[originalcell].isCorner and not racetrack[desiredcell].isCorner then
         -- have left the corner. Do speed check
-    -- if racetrack[cars[carindex].cell].speedCheck ~= nil then
         local brakescore = racetrack[originalcell].speedCheck - cars[carindex].brakestaken
         if brakescore <= 0 then     -- brake score relates to the yellow flag.
             -- correct brakes taken. No problems
@@ -694,14 +738,6 @@ function race.keyreleased(key, scancode)
             end
         end
 
-        if key == "s" then          -- capital S
-            -- save the track
-            if love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") then
-                local success = fileops.saveRaceTrack(racetrack)
-                print(success)
-            end
-        end
-
         if key == "c" then
             -- toggle corner
             local cell = getSelectedCell()
@@ -726,6 +762,17 @@ function race.keyreleased(key, scancode)
                     if racetrack[cell].speedCheck > 3 then
                         racetrack[cell].speedCheck = nil
                     end
+
+                    -- -- map all corner cells in front of this cell as a speedcheck
+                    --! not yet working. Stack overflow
+                    -- if racetrack[cell].isCorner then
+                    --     local cornercells = {}
+                    --     local newvalue = racetrack[cell].speedCheck
+                    --     cornercells = getForwardCornerCells(cell)
+                    --     for k, v in pairs(cornercells) do
+                    --     	racetrack[v].speedCheck = newvalue
+                    --     end
+                    -- end
                 end
             end
         end
