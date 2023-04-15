@@ -22,6 +22,28 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
+local function getForwardCornerCells(cell)
+    -- used during editing. Return a table of all the corner cells in front of this one
+    -- including this one
+
+    local stack = {}
+    table.insert(stack, cell)
+    for k, v in pairs(racetrack[cell].link) do
+        if v == true then       -- k = cell number. v = true/false
+            if racetrack[k].isCorner then
+                -- local thiscell = getForwardCornerCells(k)
+                -- table.insert(stack, getForwardCornerCells(k))
+                local newstack = {}
+                newstack = getForwardCornerCells(k)
+                for q, w in pairs(newstack) do
+                    table.insert(stack, w)
+                end
+            end
+        end
+    end
+    return stack
+end
+
 local function allCarsLeftGrid()
     -- returns true if all cars have entered the first corner
     for i = 1, numofcars do
@@ -434,7 +456,6 @@ local function executeLegalMove(carindex, desiredcell)
     -- if leaving corner, see if correct number of stops made
     if racetrack[originalcell].isCorner and not racetrack[desiredcell].isCorner then
         -- have left the corner. Do speed check
-    -- if racetrack[cars[carindex].cell].speedCheck ~= nil then
         local brakescore = racetrack[originalcell].speedCheck - cars[carindex].brakestaken
         if brakescore <= 0 then     -- brake score relates to the yellow flag.
             -- correct brakes taken. No problems
@@ -694,14 +715,6 @@ function race.keyreleased(key, scancode)
             end
         end
 
-        if key == "s" then          -- capital S
-            -- save the track
-            if love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") then
-                local success = fileops.saveRaceTrack(racetrack)
-                print(success)
-            end
-        end
-
         if key == "c" then
             -- toggle corner
             local cell = getSelectedCell()
@@ -725,6 +738,16 @@ function race.keyreleased(key, scancode)
                     end
                     if racetrack[cell].speedCheck > 3 then
                         racetrack[cell].speedCheck = nil
+                    end
+
+                    -- map all corner cells in front of this cell as a speedcheck
+                    if racetrack[cell].isCorner then
+                        local cornercells = {}
+                        local newvalue = racetrack[cell].speedCheck
+                        cornercells = getForwardCornerCells(cell)
+                        for k, v in pairs(cornercells) do
+                        	racetrack[v].speedCheck = newvalue
+                        end
                     end
                 end
             end
