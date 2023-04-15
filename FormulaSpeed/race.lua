@@ -790,7 +790,11 @@ function race.keyreleased(key, scancode)
             -- save the track
             if love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") then
                 local success = fileops.saveRaceTrack(racetrack)
-                print(success)
+                if success then
+                    lovelyToasts.show("Track saved", 10, "middle")
+                else
+                    lovelyToasts.show("Error during save", 10, "middle")
+                end
             else
                 local cell = getSelectedCell()
                 if cell ~= nil then     -- increment the speed check
