@@ -109,7 +109,7 @@ local function incCurrentPlayer()
     -- iterate through loop and get the number of turns used + distance to finish at same time and then sort
     local players = {}
     for i = 1, numofcars do
-        if cars[i].isEliminated then
+        if cars[i].isEliminated or cars[i].hasFinished then
             -- skip this car so it never becomes the current player
         else
             thisplayer = {}
@@ -126,10 +126,13 @@ local function incCurrentPlayer()
         end
     end
 
+    if #players == 0 then
+        error()
+    end
+
     -- print("")
     -- print("About to sort this table:")
     -- print(inspect(players))
-
     table.sort(players, function(k1, k2)
         if k1.turns < k2.turns then
             return true
@@ -348,11 +351,9 @@ local function loadCars()
         cars[i].log = {}
         cars[i].turns = 0                       -- how many turns taken
         cars[i].isOffGrid = false               -- set to true on first corner to see if car has moved off grid
+        cars[i].hasFinished = false             -- has finished the race
 
         -- gearbox
-        -- randomise the gearbox. Example:
-        -- gearbox[3][1] = the lowest value for gearbox 3
-        -- gearbox[3][2] = the highest value for gearbox 3
         cars[i].gearbox = {}
         cars[i].gearbox[1] = {}
         cars[i].gearbox[1][1] = 1
@@ -466,6 +467,7 @@ local function executeLegalMove(carindex, desiredcell)
     local originalcell = cars[carindex].cell
     cars[carindex].cell = desiredcell
     cars[carindex].movesleft = cars[carindex].movesleft - 1
+    cars[carindex].isSpun = false       -- the act of moving causes unspin
 
     if racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then
         -- car was on the finish but moved off it. It is now 'off grid'
@@ -568,12 +570,15 @@ local function executeLegalMove(carindex, desiredcell)
     -- count the number of laps completed
     if racetrack[cars[carindex].cell].isFinish and cars[carindex].isOffGrid == true then
         -- WIN!
+        cars[carindex].hasFinished = true
         print("Lap time = " .. numberofturns)
         lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
 
-        -- see if history should replace the ghost
-        if ghost == nil or numberofturns < #ghost then
-            fileops.saveGhost(history[carindex])
+        -- see if this lap performance should replace the ghost
+        if carindex == 1 then   -- ghost is only for player 1
+            if ghost == nil or numberofturns < #ghost then
+                fileops.saveGhost(history[carindex])
+            end
         end
 
         -- update the bot AI
@@ -1021,7 +1026,14 @@ function race.draw()
         else
             love.graphics.setColor(1,1,1,1)     -- white
         end
-        love.graphics.draw(CARIMAGE[i], drawx, drawy, racetrack[cars[i].cell].rotation , 1, 1, 32, 15)
+        local rotation = racetrack[cars[i].cell].rotation
+        if cars[i].isSpun then      -- draw car backwards
+            rotation = rotation + math.pi   -- pi = half a circle (in radians)
+            if rotation > 2 * math.pi then
+                rotation = rotation - (2 * math.pi)
+            end
+        end
+        love.graphics.draw(CARIMAGE[i], drawx, drawy, rotation , 1, 1, 32, 15)
     end
 
     -- draw number of moves left beside the mouse
@@ -1031,8 +1043,7 @@ function race.draw()
             drawx, drawy = cam:toWorld(drawx, drawy)
 
             if racetrack[cars[1].cell].isCorner then
-                -- the cell doesn't contain any knowledge about the speedcheck value so can't change mouse counter colours or any other
-                -- feedback. Might need to build speedcheck into the cell - but how to do with editor?
+                --! make the move left counter change colours here
             end
 
             love.graphics.setColor(1,1,1,1)     -- white
