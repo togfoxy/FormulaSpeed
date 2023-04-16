@@ -526,10 +526,11 @@ local function executeLegalMove(carindex, desiredcell)
                         lovelyToasts.show(txt, 10, "middle")
                         cars[carindex].wptyres = cars[carindex].wptyres - originalmovesleft
                     elseif cars[carindex].wptyres == originalmovesleft then
-                        -- spin becaue overshoot amoutn == wptyres
+                        -- spin becaue overshoot amount == wptyres
                         cars[carindex].wptyres = 0
                         cars[carindex].isSpun = true
                         cars[carindex].gear = 0
+                        cars[carindex].movesleft = 0
                         local txt = "Car #" .. carindex .. " has no tyre points left. Car has spun"
                         lovelyToasts.show(txt, 10, "middle")
                     elseif originalmovesleft > cars[carindex].wptyres then
@@ -543,10 +544,14 @@ local function executeLegalMove(carindex, desiredcell)
                     if originalmovesleft == 1 then  -- oveshoot on zero tyres has an odd rule
                         cars[carindex].isSpun = true
                         cars[carindex].gear = 0
+                        cars[carindex].movesleft = 0
                         if originalmovesleft > 1 then
                             -- crash out
                             eliminateCar(carindex, true)
                             txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is > 1 while out of tyre wear points")
+                            lovelyToasts.show(txt, 10, "middle")
+                        else
+                            txt = ("Car #" .. carindex .. " has spun and now has 0 tyre wear points")
                             lovelyToasts.show(txt, 10, "middle")
                         end
                     elseif originalmovesleft > 1 then
