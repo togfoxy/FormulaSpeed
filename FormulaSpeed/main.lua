@@ -112,6 +112,17 @@ function love.load()
 	lovelyToasts.options.tapToDismiss = true
 	lovelyToasts.options.queueEnabled = true
 
+	-- use this to debug the podium
+	-- local thiswin = {}
+	-- thiswin.car = 2
+	-- thiswin.turns = 999
+	-- table.insert(PODIUM, thiswin)
+	-- local thiswin = {}
+	-- thiswin.car = 1
+	-- thiswin.turns = 15
+	-- table.insert(PODIUM, thiswin)
+	-- cf.addScreen(enum.scenePodium, SCREEN_STACK)
+
 end
 
 function love.draw()

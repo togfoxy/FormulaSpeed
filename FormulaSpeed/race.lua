@@ -227,10 +227,12 @@ end
 local function isCellClear(cellindex)
 	-- returns true if no cars are on the provided cell
 	for k, v in pairs(cars) do
-		if v.cell == cellindex then
-			-- cell is not clear
-			return false
-		end
+        if not v.isFinish then
+    		if v.cell == cellindex then
+    			-- cell is not clear
+    			return false
+    		end
+        end
 	end
 	return true
 end
@@ -567,6 +569,7 @@ local function executeLegalMove(carindex, desiredcell)
     if racetrack[cars[carindex].cell].isFinish and cars[carindex].isOffGrid == true then
         -- WIN!
         cars[carindex].hasFinished = true
+        cars[carindex].movesleft = 0
 
         local thiswin = {}
         thiswin.car = carindex
@@ -1063,10 +1066,10 @@ function race.draw()
     end
 
     -- draw the ghost, if there is one
-    if currentplayer == 1 then
+    if currentplayer == 1 and cars[1].isOffGrid then
         if ghost ~= nil then        -- will be nil if no ghost.dat file exists
             if ghost[numberofturns + 1] ~= nil then
-                local ghostcell = ghost[numberofturns]
+                local ghostcell = ghost[numberofturns + 1]
 
                 local drawx = racetrack[ghostcell].x
                 local drawy = racetrack[ghostcell].y
