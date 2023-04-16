@@ -21,6 +21,7 @@ function constants.load()
     IMAGE = {}
     CARIMAGE = {}
     FONT = {}
+    PODIUM = {}               -- where/if the car finished including number of turns
 
 
     cam = nil       -- camera

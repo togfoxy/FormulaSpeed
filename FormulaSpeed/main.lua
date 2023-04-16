@@ -20,13 +20,16 @@ nativefs = require 'lib.nativefs'
 lovelyToasts = require 'lib.lovelyToasts'
 -- https://github.com/Loucee/Lovely-Toasts
 
+-- these are core modules
 require 'lib.buttons'
 require 'enums'
 require 'constants'
 fun = require 'functions'
 require 'fileops'
 
+-- these are project specific
 require 'race'
+require 'podium'
 
 function love.resize(w, h)
 	res.resize(w, h)
@@ -123,6 +126,8 @@ function love.draw()
         -- credits.draw()
     elseif currentscene == enum.sceneRace then
         race.draw()
+	elseif currentscene == enum.scenePodium then
+		podium.draw()
     else
         error()
     end

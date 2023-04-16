@@ -2,7 +2,7 @@ race = {}
 
 local racetrack = {}          -- the network of cells
 local cars = {}               -- a table of cars
-local numofcars = 6
+local numofcars = 2
 
 local celllength = 128
 local cellwidth = 64
@@ -13,7 +13,6 @@ local gearstick = {}            -- made this a table so I can do graphics stuff
 
 local ghost = {}                -- tracks the ghosts movements
 local history = {}              -- eg history[1][12] = cell 29     (car 1, turn 12, cell 29)
-local podium = {}               -- where/if the car finished including number of turns
 
 local EDIT_MODE = false                -- true/false
 
@@ -33,7 +32,7 @@ local function eliminateCar(carindex, isSpun)
     local thiswin = {}
     thiswin.car = carindex
     thiswin.turns = 999
-    table.insert(podium, thiswin)
+    table.insert(PODIUM, thiswin)
 end
 
 local function getForwardCornerCells(cell)
@@ -141,12 +140,10 @@ local function incCurrentPlayer()
     end
 
     if #players == 0 then
-        error("All cars have crashed so this game also crashed", 130)       --!
+        -- error("All cars have crashed so this game also crashed", 130)       --!
+        cf.swapScreen(enum.scenePodium, SCREEN_STACK)   -- note: doing this doesn't stop the rest of the below code executing
     end
 
-    -- print("")
-    -- print("About to sort this table:")
-    -- print(inspect(players))
     table.sort(players, function(k1, k2)
         if k1.turns < k2.turns then
             return true
@@ -163,7 +160,9 @@ local function incCurrentPlayer()
         end
     end)
 
-    currentplayer = players[1].carindex     -- this is not cars[1] - it's players[1]
+    if #players > 0 then
+        currentplayer = players[1].carindex     -- this is not cars[1] - it's players[1]
+    end
 
     -- see if every car has had a turn. If so then set number of turns
     local turntable = {}
@@ -540,7 +539,7 @@ local function executeLegalMove(carindex, desiredcell)
                 elseif cars[carindex].wptyres == 0 then
                     -- special rules when wptyres == 0
                     if originalmovesleft == 1 then  -- oveshoot on zero tyres has an odd rule
-                        casr[carindex].isSpun = true
+                        cars[carindex].isSpun = true
                         cars[carindex].gear = 0
                         if originalmovesleft > 1 then
                             -- crash out
@@ -572,7 +571,7 @@ local function executeLegalMove(carindex, desiredcell)
         local thiswin = {}
         thiswin.car = carindex
         thiswin.turns = numberofturns
-        table.insert(podium, thiswin)
+        table.insert(PODIUM, thiswin)
 
         lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
 
@@ -1066,7 +1065,7 @@ function race.draw()
     -- draw the ghost, if there is one
     if currentplayer == 1 then
         if ghost ~= nil then        -- will be nil if no ghost.dat file exists
-            if ghost[numberofturns] ~= nil then
+            if ghost[numberofturns + 1] ~= nil then
                 local ghostcell = ghost[numberofturns]
 
                 local drawx = racetrack[ghostcell].x
@@ -1243,7 +1242,6 @@ function race.update(dt)
             moveBots()
         end
     else
-
     end
 
     lovelyToasts.update(dt)
@@ -1253,16 +1251,3 @@ function race.update(dt)
 end
 
 return race
-
-
--- table.sort(players, function(k1, k2)
---     if k1.turns > k2.turns then
---         return false
---     elseif k1.turns <= k2.turns and k1.distance <= k2.distance then
---         return true
---     elseif k1.turns <= k2.turns and k1.distance > k2.distance then
---         return false
---     else
---         return false
---     end
--- end)

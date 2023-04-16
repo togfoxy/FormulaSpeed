@@ -6,6 +6,7 @@ function enums.load()
     enum.sceneMainMenu = 1
     enum.sceneCredits = 2
     enum.sceneRace = 5
+    enum.scenePodium = 6
 
     enum.imageCell = 1
     enum.imageCar = 2
