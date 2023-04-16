@@ -127,7 +127,7 @@ local function incCurrentPlayer()
     end
 
     if #players == 0 then
-        error()
+        error("All cars have crashed so this game also crashed", 130)       --!
     end
 
     -- print("")
@@ -149,9 +149,7 @@ local function incCurrentPlayer()
         end
     end)
 
-    currentplayer = players[1].carindex
-    -- print("Car #" .. currentplayer .. " has taken " .. players[1].turns .. " turns and is " .. players[1].distance .. " from the finish so will move now.")
-    -- print("Current player is now #" .. currentplayer)
+    currentplayer = players[1].carindex     -- this is not cars[1] - it's players[1]
 
     -- see if every car has had a turn. If so then set number of turns
     local turntable = {}
@@ -163,7 +161,7 @@ local function incCurrentPlayer()
     table.sort(turntable)
     numberofturns = turntable[1]
 
-    if currentplayer == 1 then
+    if currentplayer == 1 and not cars[1].isEliminated then
         TRANSLATEX = racetrack[cars[1].cell].x
         TRANSLATEY = racetrack[cars[1].cell].y
         cam:setPos(TRANSLATEX, TRANSLATEY)
@@ -353,7 +351,6 @@ local function loadCars()
         cars[i].brakestaken = 0             -- how many times did car stop in current corner
         cars[i].isEliminated = false
         cars[i].isSpun = false
-        cars[i].overshootcount = 0              -- used for special rule when wptyres == 0
         cars[i].log = {}
         cars[i].turns = 0                       -- how many turns taken
         cars[i].isOffGrid = false               -- set to true on first corner to see if car has moved off grid
@@ -452,25 +449,10 @@ local function addCarMoves(carindex)
     end
 end
 
-local function checkForElimination(carindex)
-    -- check all wear points
-    if cars[carindex].wptyres < 0 then
-        cars[carindex].isEliminated = true
-    end
-
-    --! check brakes and body etc etc
-
-    if cars[1].isEliminated then
-        -- player dead
-        lovelyToasts.show("Your car has crashed and is eliminated!", 15, "middle")
-    elseif cars[carindex].isEliminated then
-        lovelyToasts.show("Car #" .. carindex .. " is eliminated!", 15, "middle")
-    end
-end
-
 local function executeLegalMove(carindex, desiredcell)
     -- moves to desired cell which is just one cell away
     local originalcell = cars[carindex].cell
+    local originalmovesleft = cars[carindex].movesleft
     cars[carindex].cell = desiredcell
     cars[carindex].movesleft = cars[carindex].movesleft - 1
     cars[carindex].isSpun = false       -- the act of moving causes unspin
@@ -480,13 +462,14 @@ local function executeLegalMove(carindex, desiredcell)
         cars[carindex].isOffGrid = true
     end
 
-    -- if ending turn in corner then give credit for the braking
     if cars[carindex].movesleft < 1 then
         -- end of turn
         cars[carindex].movesleft = 0
 
-        -- add to history
-        history[carindex][numberofturns] = cars[carindex].cell
+        -- add to history. This tracks which cell the car landed on for each turn
+        if cars[carindex].isOffGrid then
+            history[carindex][numberofturns] = cars[carindex].cell
+        end
 
         -- add move to the log file for this car
         -- happens end of every move and is used for the bots AI. Different to history[] which is used for the ghost
@@ -497,7 +480,7 @@ local function executeLegalMove(carindex, desiredcell)
         cars[carindex].log[desiredcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
 
         -- give credit for braking in corner
-        print("Checking if desired cell# " .. desiredcell .. " is a corner")
+        -- print("Checking if desired cell# " .. desiredcell .. " is a corner")
         if racetrack[desiredcell].isCorner then     -- desired cell is actually current cell
             cars[carindex].brakestaken = cars[carindex].brakestaken + 1
         end
@@ -516,24 +499,25 @@ local function executeLegalMove(carindex, desiredcell)
                 cars[carindex].isEliminated = true
                 local txt = "Car #" .. carindex .. " ignored yellow flag and is eliminated"
                 lovelyToasts.show(txt, 10, "middle")
-            else
+                cars[carindex].movesleft = 0
+            else        -- brakescore == 1
                 -- see how many cells was overshot
                 -- some complex rules about spinning etc
                 if cars[carindex].wptyres > 0 then
                     -- different set of rules
-                    if cars[carindex].wptyres > cars[carindex].movesleft then
-                        -- normal overshoot. The + 1 here is applied because this logic happens after the move has been deducted
-                        local txt = "Car #" .. carindex .. " used " .. (cars[carindex].movesleft + 1) .. " tyre points"
+                    if cars[carindex].wptyres > originalmovesleft then
+                        -- normal overshoot
+                        local txt = "Car #" .. carindex .. " used " .. originalmovesleft .. " tyre points"
                         lovelyToasts.show(txt, 10, "middle")
-                        cars[carindex].wptyres = cars[carindex].wptyres - cars[carindex].movesleft + 1
-                    elseif cars[carindex].wptyres == (cars[carindex].movesleft + 1) then
-                        -- spin
+                        cars[carindex].wptyres = cars[carindex].wptyres - originalmovesleft
+                    elseif cars[carindex].wptyres == originalmovesleft then
+                        -- spin becaue overshoot amoutn == wptyres
                         cars[carindex].wptyres = 0
                         cars[carindex].isSpun = true
                         cars[carindex].gear = 0
                         local txt = "Car #" .. carindex .. " has no tyre points left. Car has spun"
                         lovelyToasts.show(txt, 10, "middle")
-                    elseif cars[carindex].movesleft + 1 > cars[carindex].wptyres then
+                    elseif originalmovesleft > cars[carindex].wptyres then
                         -- crash out
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is greater than tyre wear points")
                         lovelyToasts.show(txt, 10, "middle")
@@ -542,24 +526,24 @@ local function executeLegalMove(carindex, desiredcell)
                     end
                 elseif cars[carindex].wptyres == 0 then
                     -- special rules when wptyres == 0
-                    if (cars[carindex].movesleft + 1) == 1 then  -- oveshoot on zero tyres has an odd rule
-                        cars[carindex].overshootcount = cars[carindex].overshootcount + 1
+                    if originalmovesleft == 1 then  -- oveshoot on zero tyres has an odd rule
                         casr[carindex].isSpun = true
                         cars[carindex].gear = 0
-
-                        if cars[carindex].overshootcount > 2 then
+                        if originalmovesleft > 1 then
                             -- crash out
-                            txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is > 2 while out of tyre wear points")
+                            txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is > 1 while out of tyre wear points")
                             lovelyToasts.show(txt, 10, "middle")
                             cars[carindex].isEliminated = true
                             cars[carindex].isSpun = true
+                            cars[carindex].movesleft = 0
                         end
-                    elseif (cars[carindex].movesleft + 1) > 1 then
+                    elseif originalmovesleft > 1 then
                         -- crash
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount > 1 while out of tyre wear points")
                         lovelyToasts.show(txt, 10, "middle")
                         cars[carindex].isEliminated = true
                         cars[carindex].isSpun = true
+                        cars[carindex].movesleft = 0
                     else
                         error("Oops. Unexpected code executed", 394)
                     end
@@ -571,9 +555,7 @@ local function executeLegalMove(carindex, desiredcell)
         cars[carindex].brakestaken = 0     -- reset for next corner
     end
 
-    -- checkForElimination(carindex)      -- carindex
-
-    -- count the number of laps completed
+    -- check for a finish
     if racetrack[cars[carindex].cell].isFinish and cars[carindex].isOffGrid == true then
         -- WIN!
         cars[carindex].hasFinished = true
@@ -583,7 +565,8 @@ local function executeLegalMove(carindex, desiredcell)
         -- see if this lap performance should replace the ghost
         if carindex == 1 then   -- ghost is only for player 1
             if ghost == nil or numberofturns < #ghost then
-                fileops.saveGhost(history[carindex])
+                local success = fileops.saveGhost(history[carindex])
+                print("Ghost save success: " .. tostring(success))
             end
         end
 
@@ -606,18 +589,13 @@ local function executeLegalMove(carindex, desiredcell)
         end
         local success = fileops.saveTrackKnowledge(trackknowledge)
         print("Knowledge save success: " .. tostring(success))
-        print(inspect(trackknowledge))
+        -- print(inspect(trackknowledge))
 
     end
 
     if currentplayer ~= 1 then
-        pausetimer = 1.5			-- seconds
+        pausetimer = 1.25			-- seconds
     end
-
-    -- if cars[carindex].movesleft < 1 then
-    --     cars[carindex].turns = cars[carindex].turns + 1
-    --     incCurrentPlayer()
-    -- end
 end
 
 local function botSelectGear(botnumber)
@@ -904,22 +882,28 @@ function race.mousereleased(rx, ry, x, y, button)
             end
             if button == 2 then
                 -- try to move the car to the selected cell if linked
-                if cars[1].movesleft > 0 then
-                    local currentcell = cars[1].cell
-                    local desiredcell = getSelectedCell()
+                if not cars[1].isEliminated then
+                    if cars[1].movesleft > 0 then
+                        local currentcell = cars[1].cell
+                        local desiredcell = getSelectedCell()
 
-                    if desiredcell ~= nil then
-                        if racetrack[currentcell].link[desiredcell] == true then
-                            -- move is legal
-                            executeLegalMove(1, desiredcell)
-                            if cars[1].movesleft < 1 then
-                                cars[1].turns = cars[1].turns + 1
-                                incCurrentPlayer()
+                        if desiredcell ~= nil then
+                            if racetrack[currentcell].link[desiredcell] == true then
+                                -- move is legal
+                                executeLegalMove(1, desiredcell)
+                                if cars[1].movesleft < 1 then
+                                    cars[1].movesleft = 0
+                                    cars[1].turns = cars[1].turns + 1
+                                    incCurrentPlayer()
+                                end
                             end
+                        else
+                            -- no desired cell. Do nothing. Move not legal
                         end
-                    else
-                        -- no desired cell. Do nothing. Move not legal
                     end
+                else
+                    cars[1].movesleft = 0
+                    incCurrentPlayer()
                 end
             end
         end
