@@ -162,6 +162,12 @@ local function incCurrentPlayer()
     end
     table.sort(turntable)
     numberofturns = turntable[1]
+
+    if currentplayer == 1 then
+        TRANSLATEX = racetrack[cars[1].cell].x
+        TRANSLATEY = racetrack[cars[1].cell].y
+        cam:setPos(TRANSLATEX, TRANSLATEY)
+    end
 end
 
 local function unselectAllCells()
@@ -1239,6 +1245,8 @@ function race.update(dt)
         if pausetimer <= 0 then
             moveBots()
         end
+    else
+
     end
 
     lovelyToasts.update(dt)
