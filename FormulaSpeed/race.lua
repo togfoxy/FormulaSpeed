@@ -2,7 +2,7 @@ race = {}
 
 local racetrack = {}          -- the network of cells
 local cars = {}               -- a table of cars
-local numofcars = 2
+local numofcars = 6
 
 local celllength = 128
 local cellwidth = 64
