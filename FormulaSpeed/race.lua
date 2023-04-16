@@ -593,9 +593,8 @@ local function executeLegalMove(carindex, desiredcell)
 
     end
 
-    if currentplayer ~= 1 then
-        pausetimer = 1.25			-- seconds
-    end
+    pausetimer = 1.0			-- seconds
+
 end
 
 local function botSelectGear(botnumber)
@@ -1223,7 +1222,7 @@ function race.update(dt)
     end
 
     pausetimer = pausetimer - dt
-    if pausetimer < 0 then pausertimer = 0 end
+    if pausetimer < 0 then pausetimer = 0 end
 
     if currentplayer > 1 then
         if pausetimer <= 0 then
