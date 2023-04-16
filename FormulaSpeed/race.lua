@@ -2,7 +2,7 @@ race = {}
 
 local racetrack = {}          -- the network of cells
 local cars = {}               -- a table of cars
-local numofcars = 6
+local numofcars = 2
 
 local celllength = 128
 local cellwidth = 64
@@ -21,6 +21,19 @@ local numberofturns = 0
 local diceroll = nil                    -- this is the number of moves allocated when choosing a gear.
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
+
+local function eliminateCar(carindex, isSpun)
+    -- it has been determined this car needs to be eliminated
+    -- operates on global PODIUM
+    -- input: isSpun = set to true if car is to spin and eliminate
+    cars[carindex].isEliminated = true
+    cars[carindex].isSpun = isSpun
+    cars[carindex].movesleft = 0
+    local thiswin = {}
+    thiswin.car = carindex
+    thiswin.turns = 999
+    table.insert(PODIUM, thiswin)
+end
 
 local function getForwardCornerCells(cell)
     -- used during editing. Return a table of all the corner cells in front of this one
@@ -127,12 +140,10 @@ local function incCurrentPlayer()
     end
 
     if #players == 0 then
-        error("All cars have crashed so this game also crashed", 130)       --!
+        -- error("All cars have crashed so this game also crashed", 130)       --!
+        cf.swapScreen(enum.scenePodium, SCREEN_STACK)   -- note: doing this doesn't stop the rest of the below code executing
     end
 
-    -- print("")
-    -- print("About to sort this table:")
-    -- print(inspect(players))
     table.sort(players, function(k1, k2)
         if k1.turns < k2.turns then
             return true
@@ -149,7 +160,9 @@ local function incCurrentPlayer()
         end
     end)
 
-    currentplayer = players[1].carindex     -- this is not cars[1] - it's players[1]
+    if #players > 0 then
+        currentplayer = players[1].carindex     -- this is not cars[1] - it's players[1]
+    end
 
     -- see if every car has had a turn. If so then set number of turns
     local turntable = {}
@@ -214,10 +227,12 @@ end
 local function isCellClear(cellindex)
 	-- returns true if no cars are on the provided cell
 	for k, v in pairs(cars) do
-		if v.cell == cellindex then
-			-- cell is not clear
-			return false
-		end
+        if not v.isFinish then
+    		if v.cell == cellindex then
+    			-- cell is not clear
+    			return false
+    		end
+        end
 	end
 	return true
 end
@@ -496,10 +511,10 @@ local function executeLegalMove(carindex, desiredcell)
             -- overshoot
             if brakescore >= 2 then
                 -- elimination
-                cars[carindex].isEliminated = true
+                eliminateCar(carindex, true)
                 local txt = "Car #" .. carindex .. " ignored yellow flag and is eliminated"
                 lovelyToasts.show(txt, 10, "middle")
-                cars[carindex].movesleft = 0
+
             else        -- brakescore == 1
                 -- see how many cells was overshot
                 -- some complex rules about spinning etc
@@ -511,39 +526,39 @@ local function executeLegalMove(carindex, desiredcell)
                         lovelyToasts.show(txt, 10, "middle")
                         cars[carindex].wptyres = cars[carindex].wptyres - originalmovesleft
                     elseif cars[carindex].wptyres == originalmovesleft then
-                        -- spin becaue overshoot amoutn == wptyres
+                        -- spin becaue overshoot amount == wptyres
                         cars[carindex].wptyres = 0
                         cars[carindex].isSpun = true
                         cars[carindex].gear = 0
+                        cars[carindex].movesleft = 0
                         local txt = "Car #" .. carindex .. " has no tyre points left. Car has spun"
                         lovelyToasts.show(txt, 10, "middle")
                     elseif originalmovesleft > cars[carindex].wptyres then
                         -- crash out
+                        eliminateCar(carindex, true)
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is greater than tyre wear points")
                         lovelyToasts.show(txt, 10, "middle")
-                        cars[carindex].isEliminated = true
-                        cars[carindex].isSpun = true
                     end
                 elseif cars[carindex].wptyres == 0 then
                     -- special rules when wptyres == 0
                     if originalmovesleft == 1 then  -- oveshoot on zero tyres has an odd rule
-                        casr[carindex].isSpun = true
+                        cars[carindex].isSpun = true
                         cars[carindex].gear = 0
+                        cars[carindex].movesleft = 0
                         if originalmovesleft > 1 then
                             -- crash out
+                            eliminateCar(carindex, true)
                             txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is > 1 while out of tyre wear points")
                             lovelyToasts.show(txt, 10, "middle")
-                            cars[carindex].isEliminated = true
-                            cars[carindex].isSpun = true
-                            cars[carindex].movesleft = 0
+                        else
+                            txt = ("Car #" .. carindex .. " has spun and now has 0 tyre wear points")
+                            lovelyToasts.show(txt, 10, "middle")
                         end
                     elseif originalmovesleft > 1 then
                         -- crash
+                        eliminateCar(carindex, true)
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount > 1 while out of tyre wear points")
                         lovelyToasts.show(txt, 10, "middle")
-                        cars[carindex].isEliminated = true
-                        cars[carindex].isSpun = true
-                        cars[carindex].movesleft = 0
                     else
                         error("Oops. Unexpected code executed", 394)
                     end
@@ -559,7 +574,13 @@ local function executeLegalMove(carindex, desiredcell)
     if racetrack[cars[carindex].cell].isFinish and cars[carindex].isOffGrid == true then
         -- WIN!
         cars[carindex].hasFinished = true
-        print("Lap time = " .. numberofturns)
+        cars[carindex].movesleft = 0
+
+        local thiswin = {}
+        thiswin.car = carindex
+        thiswin.turns = numberofturns
+        table.insert(PODIUM, thiswin)
+
         lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
 
         -- see if this lap performance should replace the ghost
@@ -593,9 +614,8 @@ local function executeLegalMove(carindex, desiredcell)
 
     end
 
-    if currentplayer ~= 1 then
-        pausetimer = 1.25			-- seconds
-    end
+    pausetimer = 1.0			-- seconds
+
 end
 
 local function botSelectGear(botnumber)
@@ -1051,10 +1071,10 @@ function race.draw()
     end
 
     -- draw the ghost, if there is one
-    if currentplayer == 1 then
+    if currentplayer == 1 and cars[1].isOffGrid then
         if ghost ~= nil then        -- will be nil if no ghost.dat file exists
-            if ghost[numberofturns] ~= nil then
-                local ghostcell = ghost[numberofturns]
+            if ghost[numberofturns + 1] ~= nil then
+                local ghostcell = ghost[numberofturns + 1]
 
                 local drawx = racetrack[ghostcell].x
                 local drawy = racetrack[ghostcell].y
@@ -1223,14 +1243,13 @@ function race.update(dt)
     end
 
     pausetimer = pausetimer - dt
-    if pausetimer < 0 then pausertimer = 0 end
+    if pausetimer < 0 then pausetimer = 0 end
 
     if currentplayer > 1 then
         if pausetimer <= 0 then
             moveBots()
         end
     else
-
     end
 
     lovelyToasts.update(dt)
@@ -1240,16 +1259,3 @@ function race.update(dt)
 end
 
 return race
-
-
--- table.sort(players, function(k1, k2)
---     if k1.turns > k2.turns then
---         return false
---     elseif k1.turns <= k2.turns and k1.distance <= k2.distance then
---         return true
---     elseif k1.turns <= k2.turns and k1.distance > k2.distance then
---         return false
---     else
---         return false
---     end
--- end)

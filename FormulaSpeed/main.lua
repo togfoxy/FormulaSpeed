@@ -20,13 +20,16 @@ nativefs = require 'lib.nativefs'
 lovelyToasts = require 'lib.lovelyToasts'
 -- https://github.com/Loucee/Lovely-Toasts
 
+-- these are core modules
 require 'lib.buttons'
 require 'enums'
 require 'constants'
 fun = require 'functions'
 require 'fileops'
 
+-- these are project specific
 require 'race'
+require 'podium'
 
 function love.resize(w, h)
 	res.resize(w, h)
@@ -109,6 +112,17 @@ function love.load()
 	lovelyToasts.options.tapToDismiss = true
 	lovelyToasts.options.queueEnabled = true
 
+	-- use this to debug the podium
+	-- local thiswin = {}
+	-- thiswin.car = 2
+	-- thiswin.turns = 999
+	-- table.insert(PODIUM, thiswin)
+	-- local thiswin = {}
+	-- thiswin.car = 1
+	-- thiswin.turns = 15
+	-- table.insert(PODIUM, thiswin)
+	-- cf.addScreen(enum.scenePodium, SCREEN_STACK)
+
 end
 
 function love.draw()
@@ -123,6 +137,8 @@ function love.draw()
         -- credits.draw()
     elseif currentscene == enum.sceneRace then
         race.draw()
+	elseif currentscene == enum.scenePodium then
+		podium.draw()
     else
         error()
     end
