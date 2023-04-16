@@ -13,6 +13,7 @@ local gearstick = {}            -- made this a table so I can do graphics stuff
 
 local ghost = {}                -- tracks the ghosts movements
 local history = {}              -- eg history[1][12] = cell 29     (car 1, turn 12, cell 29)
+local podium = {}               -- where/if the car finished including number of turns
 
 local EDIT_MODE = false                -- true/false
 
@@ -21,6 +22,19 @@ local numberofturns = 0
 local diceroll = nil                    -- this is the number of moves allocated when choosing a gear.
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
+
+local function eliminateCar(carindex, isSpun)
+    -- it has been determined this car needs to be eliminated
+    -- operates on global PODIUM
+    -- input: isSpun = set to true if car is to spin and eliminate
+    cars[carindex].isEliminated = true
+    cars[carindex].isSpun = isSpun
+    cars[carindex].movesleft = 0
+    local thiswin = {}
+    thiswin.car = carindex
+    thiswin.turns = 999
+    table.insert(podium, thiswin)
+end
 
 local function getForwardCornerCells(cell)
     -- used during editing. Return a table of all the corner cells in front of this one
@@ -496,10 +510,10 @@ local function executeLegalMove(carindex, desiredcell)
             -- overshoot
             if brakescore >= 2 then
                 -- elimination
-                cars[carindex].isEliminated = true
+                eliminateCar(carindex, true)
                 local txt = "Car #" .. carindex .. " ignored yellow flag and is eliminated"
                 lovelyToasts.show(txt, 10, "middle")
-                cars[carindex].movesleft = 0
+
             else        -- brakescore == 1
                 -- see how many cells was overshot
                 -- some complex rules about spinning etc
@@ -519,10 +533,9 @@ local function executeLegalMove(carindex, desiredcell)
                         lovelyToasts.show(txt, 10, "middle")
                     elseif originalmovesleft > cars[carindex].wptyres then
                         -- crash out
+                        eliminateCar(carindex, true)
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is greater than tyre wear points")
                         lovelyToasts.show(txt, 10, "middle")
-                        cars[carindex].isEliminated = true
-                        cars[carindex].isSpun = true
                     end
                 elseif cars[carindex].wptyres == 0 then
                     -- special rules when wptyres == 0
@@ -531,19 +544,15 @@ local function executeLegalMove(carindex, desiredcell)
                         cars[carindex].gear = 0
                         if originalmovesleft > 1 then
                             -- crash out
+                            eliminateCar(carindex, true)
                             txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is > 1 while out of tyre wear points")
                             lovelyToasts.show(txt, 10, "middle")
-                            cars[carindex].isEliminated = true
-                            cars[carindex].isSpun = true
-                            cars[carindex].movesleft = 0
                         end
                     elseif originalmovesleft > 1 then
                         -- crash
+                        eliminateCar(carindex, true)
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount > 1 while out of tyre wear points")
                         lovelyToasts.show(txt, 10, "middle")
-                        cars[carindex].isEliminated = true
-                        cars[carindex].isSpun = true
-                        cars[carindex].movesleft = 0
                     else
                         error("Oops. Unexpected code executed", 394)
                     end
@@ -559,7 +568,12 @@ local function executeLegalMove(carindex, desiredcell)
     if racetrack[cars[carindex].cell].isFinish and cars[carindex].isOffGrid == true then
         -- WIN!
         cars[carindex].hasFinished = true
-        print("Lap time = " .. numberofturns)
+
+        local thiswin = {}
+        thiswin.car = carindex
+        thiswin.turns = numberofturns
+        table.insert(podium, thiswin)
+
         lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
 
         -- see if this lap performance should replace the ghost
