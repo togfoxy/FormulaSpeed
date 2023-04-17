@@ -230,13 +230,14 @@ end
 local function isCellClear(cellindex)
 	-- returns true if no cars are on the provided cell
 	for k, v in pairs(cars) do
-        if not v.hasFinished then
-    		if v.cell == cellindex then
-    			-- cell is not clear
-    			return false
-    		end
+        if v.hasFinished or v.isEliminated then
+            -- do nothing. cell is clear
+        else
+            if v.cell == cellindex then
+                return false
+            end
         end
-	end
+    end
 	return true
 end
 
