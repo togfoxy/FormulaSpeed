@@ -13,6 +13,7 @@ local gearstick = {}            -- made this a table so I can do graphics stuff
 
 local ghost = {}                -- tracks the ghosts movements
 local history = {}              -- eg history[1][12] = cell 29     (car 1, turn 12, cell 29)
+local oilslick = {}             -- track where the oil slicks are eg oilslick[33] = true
 
 local EDIT_MODE = false                -- true/false
 
@@ -33,6 +34,10 @@ local function eliminateCar(carindex, isSpun)
     thiswin.car = carindex
     thiswin.turns = 999
     table.insert(PODIUM, thiswin)
+
+    -- add an oil slick
+    local cell = cars[carindex].cell
+    oilslick[cell] = true
 end
 
 local function getForwardCornerCells(cell)
@@ -918,6 +923,7 @@ function race.mousereleased(rx, ry, x, y, button)
                                     cars[1].wpbrakes = cars[1].wpbrakes - 1
                                     cars[1].wpengine = cars[1].wpengine - 1
                                     cars[1].gear = desiredgear
+                                    oilslick[cars[1].cell] = true
                                     addCarMoves(1)      -- car index
                                     lovelyToasts.show("Gearbox, brake and engine point used", 15, "middle")
                                 else
@@ -1053,6 +1059,18 @@ function race.draw()
     -- draw the track background first
     love.graphics.setColor(1,1,1,1)
     love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
+
+    -- draw the oil on top of the background
+    for k, v in pairs(oilslick) do
+        if v == true then
+            local drawx = racetrack[k].x
+            local drawy = racetrack[k].y
+            local rotation = racetrack[k].rotation
+            love.graphics.setColor(1,1,1,1)
+            love.graphics.draw(IMAGE[enum.imageOil], drawx, drawy, rotation, 1, 1, 30, 13)
+        end
+    end
+
 
     -- draw the cars
     for i = 1, numofcars do
@@ -1274,6 +1292,8 @@ function race.update(dt)
         TRANSLATEY = racetrack[cars[1].cell].y
         cam:setPos(TRANSLATEX, TRANSLATEY)
     end
+
+    oilslick[274] = true
 
     pausetimer = pausetimer - dt
     if pausetimer < 0 then pausetimer = 0 end

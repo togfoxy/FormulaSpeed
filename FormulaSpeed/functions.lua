@@ -6,6 +6,7 @@ function functions.loadImages()
     IMAGE[enum.imageCellFinish] = love.graphics.newImage("assets/images/cellfinish_32x16.png")
     IMAGE[enum.imageCar] = love.graphics.newImage("assets/images/car_64x29.png")
     IMAGE[enum.imageTrack] = love.graphics.newImage("assets/images/track.jpg")
+    IMAGE[enum.imageOil] = love.graphics.newImage("assets/images/oil_64x28.png")
 
     CARIMAGE[1] = love.graphics.newImage("assets/images/car1_64x29.png")
 	CARIMAGE[2] = love.graphics.newImage("assets/images/car2_64x29.png")
