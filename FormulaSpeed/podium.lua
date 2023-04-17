@@ -4,7 +4,7 @@ function podium.mousereleased(rx, ry, x, y, button)
     -- call from love.mousereleased()
 
     local clickedButtonID = buttons.getButtonID(rx, ry)
-    
+
     if clickedButtonID == enum.buttonPodiumExit then
         love.event.quit()
     elseif clickedButtonID == enum.buttonPodiumExit then
@@ -51,9 +51,9 @@ function podium.loadButtons()
 
     -- button for exit
     local mybutton = {}
-    local buttonsequence = 2            -- sequence on the screen
+    local buttonsequence = 1            -- sequence on the screen
     mybutton.x = (SCREEN_WIDTH / 2) - 75
-    mybutton.y = SCREEN_HEIGHT - 75
+    mybutton.y = SCREEN_HEIGHT / 2
     mybutton.width = 125
     mybutton.height = 25
     mybutton.bgcolour = {169/255,169/255,169/255,1}
@@ -72,7 +72,7 @@ function podium.loadButtons()
     mybutton.labelxoffset = 15
 
     mybutton.state = "on"
-    mybutton.visible = false
+    mybutton.visible = true
     mybutton.scene = enum.scenePodium               -- change and add to enum
     mybutton.identifier = enum.buttonPodiumExit     -- change and add to enum
     table.insert(GUI_BUTTONS, mybutton) -- this adds the button to the global table

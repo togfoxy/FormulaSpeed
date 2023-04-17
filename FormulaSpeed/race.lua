@@ -2,7 +2,7 @@ race = {}
 
 local racetrack = {}          -- the network of cells
 local cars = {}               -- a table of cars
-local numofcars = 6
+local numofcars = 2
 
 local celllength = 128
 local cellwidth = 64
@@ -23,10 +23,11 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
-local function eliminateCar(carindex, isSpun)
+local function eliminateCar(carindex, isSpun, msg)
     -- it has been determined this car needs to be eliminated
     -- operates on global PODIUM
     -- input: isSpun = set to true if car is to spin and eliminate
+    -- input: msg = string to display in toast message
     cars[carindex].isEliminated = true
     cars[carindex].isSpun = isSpun
     cars[carindex].movesleft = 0
@@ -34,6 +35,13 @@ local function eliminateCar(carindex, isSpun)
     thiswin.car = carindex
     thiswin.turns = 999
     table.insert(PODIUM, thiswin)
+
+    if msg ~= nil then
+        lovelyToasts.show(txt, 10, "middle", msg)
+    else
+        print("Elimination without a msg!")
+        error()
+    end
 
     -- add an oil slick
     local cell = cars[carindex].cell
@@ -507,9 +515,9 @@ local function executeLegalMove(carindex, desiredcell)
             cars[carindex].wphandling = cars[carindex].wphandling - 1
             if cars[carindex].wphandling < 1 then
                 -- eliminated
-                eliminateCar(carindex, true)
                 local txt = "Car #" .. carindex .. " has lost road handling and is eliminated"
-                lovelyToasts.show(txt, 10, "middle")
+                eliminateCar(carindex, true, txt)
+
             end
         end
     end
@@ -545,9 +553,8 @@ local function executeLegalMove(carindex, desiredcell)
                             cars[i].wpengine = cars[i].wpengine - 1
                             oilslick[cars[i].cell] = true               -- place oil slick
                             if cars[i].wpengine < 1 then
-                                eliminateCar(carindex, true)
                                 local txt = "Car #" .. carindex .. " has blown an engine and is eliminated"
-                                lovelyToasts.show(txt, 10, "middle")
+                                eliminateCar(carindex, true, txt)
                             else
                                 local txt = "Car #" .. carindex .. " has suffers engine damage"
                                 lovelyToasts.show(txt, 10, "middle")
@@ -569,10 +576,8 @@ local function executeLegalMove(carindex, desiredcell)
             -- overshoot
             if brakescore >= 2 then
                 -- elimination
-                eliminateCar(carindex, true)
                 local txt = "Car #" .. carindex .. " ignored yellow flag and is eliminated"
-                lovelyToasts.show(txt, 10, "middle")
-
+                eliminateCar(carindex, true, txt)
             else        -- brakescore == 1
                 -- see how many cells was overshot
                 -- some complex rules about spinning etc
@@ -593,9 +598,8 @@ local function executeLegalMove(carindex, desiredcell)
                         lovelyToasts.show(txt, 10, "middle")
                     elseif originalmovesleft > cars[carindex].wptyres then
                         -- crash out
-                        eliminateCar(carindex, true)
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is greater than tyre wear points")
-                        lovelyToasts.show(txt, 10, "middle")
+                        eliminateCar(carindex, true, txt)
                     end
                 elseif cars[carindex].wptyres == 0 then
                     -- special rules when wptyres == 0
@@ -605,23 +609,21 @@ local function executeLegalMove(carindex, desiredcell)
                         cars[carindex].movesleft = 0
                         if originalmovesleft > 1 then
                             -- crash out
-                            eliminateCar(carindex, true)
                             txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is > 1 while out of tyre wear points")
-                            lovelyToasts.show(txt, 10, "middle")
+                            eliminateCar(carindex, true, txt)
                         else
                             txt = ("Car #" .. carindex .. " has spun and now has 0 tyre wear points")
                             lovelyToasts.show(txt, 10, "middle")
                         end
                     elseif originalmovesleft > 1 then
                         -- crash
-                        eliminateCar(carindex, true)
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount > 1 while out of tyre wear points")
-                        lovelyToasts.show(txt, 10, "middle")
+                        eliminateCar(carindex, true, txt)
                     else
-                        error("Oops. Unexpected code executed", 394)
+                        error("Oops. Unexpected code executed", 620)
                     end
                 else
-                    error("Oops. Unexpected code executed", 399)
+                    error("Oops. Unexpected code executed", 623)
                 end
             end
         end
@@ -639,7 +641,7 @@ local function executeLegalMove(carindex, desiredcell)
         thiswin.turns = numberofturns
         table.insert(PODIUM, thiswin)
 
-        lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
+        lovelyToasts.show("Lap time = " .. numberofturns, 10, "middle")
 
         -- see if this lap performance should replace the ghost
         if carindex == 1 then   -- ghost is only for player 1
@@ -986,13 +988,13 @@ function race.mousereleased(rx, ry, x, y, button)
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].gear = desiredgear
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox point used", 15, "middle")
+                                    lovelyToasts.show("Gearbox point used", 10, "middle")
                                 elseif gearchange == -3 then -- a rapid shift down. Damage gearbox
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].wpbrakes = cars[1].wpbrakes - 1
                                     cars[1].gear = desiredgear
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox and brake point used", 15, "middle")
+                                    lovelyToasts.show("Gearbox and brake point used", 10, "middle")
                                 elseif gearchange == -4 then -- a rapid shift down. Damage gearbox
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].wpbrakes = cars[1].wpbrakes - 1
@@ -1000,7 +1002,7 @@ function race.mousereleased(rx, ry, x, y, button)
                                     cars[1].gear = desiredgear
                                     oilslick[cars[1].cell] = true
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox, brake and engine point used", 15, "middle")
+                                    lovelyToasts.show("Gearbox, brake and engine point used", 10, "middle")
                                 else
                                     -- illegal shift. Do nothing
                                 end
