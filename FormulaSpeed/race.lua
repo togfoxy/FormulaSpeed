@@ -466,11 +466,14 @@ local function addCarMoves(carindex)
     -- add move to the log file for this car
     -- happens start of every move and is used for the bots AI. Different to history[] which is used for the ghost
     -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 on dice roll
-    local currentcell = cars[carindex].cell
-    if cars[carindex].log[currentcell] == nil then     -- at this point, desiredcell = cars[1].cell
-        cars[carindex].log[currentcell] = {}
+    if cars[carindex].isOffGrid then
+        local currentcell = cars[carindex].cell
+        if cars[carindex].log[currentcell] == nil then     -- at this point, desiredcell = cars[1].cell
+            cars[carindex].log[currentcell] = {}
+        end
+        cars[carindex].log[currentcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
+        print("Adding dice roll " .. diceroll .. " to cell #" .. currentcell)
     end
-    cars[carindex].log[currentcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
 end
 
 local function executeLegalMove(carindex, desiredcell)
@@ -730,7 +733,7 @@ end
 function drawKnowledge()
     -- called from race.draw to display bot track knowledge
     for k, v in pairs(racetrack) do
-        if trackknowledge[k] ~= nil then
+        if trackknowledge ~= nil and trackknowledge[k] ~= nil then
             local drawx = racetrack[k].x
             local drawy = racetrack[k].y
 
