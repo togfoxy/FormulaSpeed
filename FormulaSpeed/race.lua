@@ -519,7 +519,7 @@ local function executeLegalMove(carindex, desiredcell)
         -- end of turn
         cars[carindex].movesleft = 0
 
-        -- add to history. This tracks which cell the car landed on for each turn
+        -- add to history if off grid. This tracks which cell the car landed on at the end of each turn
         if cars[carindex].isOffGrid then
             history[carindex][numberofturns] = cars[carindex].cell
         end
@@ -528,6 +528,34 @@ local function executeLegalMove(carindex, desiredcell)
         -- print("Checking if desired cell# " .. desiredcell .. " is a corner")
         if racetrack[desiredcell].isCorner then     -- desired cell is actually current cell
             cars[carindex].brakestaken = cars[carindex].brakestaken + 1
+        end
+
+        -- check for motor strain. Happens if dice rolls the extreme limit of gear 5 or 6
+        if diceroll == cars[carindex].gearbox[5][2] or diceroll == cars[carindex].gearbox[6][2] then
+            -- engine check for ALL players in gear 5 or 6
+            print("Engine strain check")
+            for i = 1, numofcars do
+                if cars[i].isEliminated or cars[i].isFinish then
+                    -- do nothing
+                else
+                    if cars[i].gear > 4 then
+                        -- 20% chance of engine damage
+                        if love.math.random(1,100) <= 20 then
+                            -- oops. Engine damaged
+                            cars[i].wpengine = cars[i].wpengine - 1
+                            oilslick[cars[i].cell] = true               -- place oil slick
+                            if cars[i].wpengine < 1 then
+                                eliminateCar(carindex, true)
+                                local txt = "Car #" .. carindex .. " has blown an engine and is eliminated"
+                                lovelyToasts.show(txt, 10, "middle")
+                            else
+                                local txt = "Car #" .. carindex .. " has suffers engine damage"
+                                lovelyToasts.show(txt, 10, "middle")
+                            end
+                        end
+                    end
+                end
+            end
         end
     end
 
