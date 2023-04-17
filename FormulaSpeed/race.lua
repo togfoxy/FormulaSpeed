@@ -621,7 +621,11 @@ local function executeLegalMove(carindex, desiredcell)
 
     end
 
-    pausetimer = 1.0			-- seconds
+    if cars[1].isEliminated or cars[1].hasFinished then
+        pausetimer = 0.25
+    else
+        pausetimer = 1.0			-- seconds
+    end
 
 end
 
