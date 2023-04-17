@@ -121,6 +121,7 @@ local function incCurrentPlayer()
 
     -- iterate through loop and get the number of turns used + distance to finish at same time and then sort
     local players = {}
+    -- create a temp list of all cars in play
     for i = 1, numofcars do
         if cars[i].isEliminated or cars[i].hasFinished then
             -- skip this car so it never becomes the current player
@@ -139,11 +140,12 @@ local function incCurrentPlayer()
         end
     end
 
+    -- if there are no cars in play then prep the next scene
     if #players == 0 then
-        -- error("All cars have crashed so this game also crashed", 130)       --!
         cf.swapScreen(enum.scenePodium, SCREEN_STACK)   -- note: doing this doesn't stop the rest of the below code executing
     end
 
+    -- custom sort the table of cars that are still in play
     table.sort(players, function(k1, k2)
         if k1.turns < k2.turns then
             return true
@@ -160,6 +162,7 @@ local function incCurrentPlayer()
         end
     end)
 
+    -- set the next player (current player)
     if #players > 0 then
         currentplayer = players[1].carindex     -- this is not cars[1] - it's players[1]
     end
@@ -167,7 +170,7 @@ local function incCurrentPlayer()
     -- see if every car has had a turn. If so then set number of turns
     local turntable = {}
     for i = 1, numofcars do
-        if not cars[i].isEliminated then
+        if not cars[i].isEliminated and not cars[i].hasFinished then
             table.insert(turntable, cars[i].turns)
         end
     end
@@ -227,7 +230,7 @@ end
 local function isCellClear(cellindex)
 	-- returns true if no cars are on the provided cell
 	for k, v in pairs(cars) do
-        if not v.isFinish then
+        if not v.hasFinished then
     		if v.cell == cellindex then
     			-- cell is not clear
     			return false
