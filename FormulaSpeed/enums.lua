@@ -9,6 +9,7 @@ function enums.load()
     enum.scenePodium = 6
 
     enum.buttonPodiumExit = 1
+    enum.buttonBrake = 2
 
     enum.imageCell = 1
     enum.imageCar = 2

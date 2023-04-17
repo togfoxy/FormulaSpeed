@@ -676,6 +676,32 @@ local function moveBots()
     applyMoves(currentplayer)
 end
 
+local function applyBrake(carindex)
+    -- apply brakes 1 time and deal with outcome
+    -- check there are moves left
+    if cars[carindex].movesleft > 0 then
+        -- see if there are brake points left
+        if cars[carindex].wpbrakes > 0 then
+            cars[carindex].movesleft = cars[carindex].movesleft - 1
+            cars[carindex].wpbrakes = cars[carindex].wpbrakes - 1
+            local txt = "Car #" .. carindex .. " used 1 brake point"
+            lovelyToasts.show(txt, 10, "middle")
+
+            if cars[1].movesleft < 1 then
+                cars[1].movesleft = 0
+                cars[1].turns = cars[1].turns + 1
+                incCurrentPlayer()
+            end
+        else
+            if carindex == 1 then
+                lovelyToasts.show("No brake points available!", 10, "middle")
+            end
+        end
+    else
+        -- trying to use brake when no moves left is silly. Do nothing
+    end
+end
+
 local function drawGearStick(currentgear)
     -- draw gear stick in bottom right corner
     -- draw the lines on the gear stick first
@@ -774,7 +800,6 @@ function race.keypressed( key, scancode, isrepeat )
 	if rightpressed then TRANSLATEX = TRANSLATEX + translatefactor end
 	if uppressed then TRANSLATEY = TRANSLATEY - translatefactor end
 	if downpressed then TRANSLATEY = TRANSLATEY + translatefactor end
-
 end
 
 function race.keyreleased(key, scancode)
@@ -884,7 +909,7 @@ function race.mousereleased(rx, ry, x, y, button)
                 -- see if the brake button is pressed
                 local clickedButtonID = buttons.getButtonID(rx, ry)
                 if clickedButtonID == enum.buttonBrake then
-                    print("Hi")
+                    applyBrake(1)       -- carindex 1 == player
                 end
 
                 -- see if a gear is selected
@@ -1329,14 +1354,14 @@ function race.loadButtons()
     local numofbuttons = 1      -- how many buttons on this form, assuming a single column
     local numofsectors = numofbuttons + 1
 
-    -- button for exit
+    -- button for brake
     local mybutton = {}
     local buttonsequence = 1            -- sequence on the screen
     mybutton.x = SCREEN_WIDTH - 185
     mybutton.y = SCREEN_HEIGHT - 275
-    mybutton.width = 125
-    mybutton.height = 25
-    mybutton.bgcolour = {1,1,1,1}
+    mybutton.width = 110               -- use this to define click zone on images
+    mybutton.height = 35
+    mybutton.bgcolour = {1,1,1,0}       -- set alpha to zero if drawing an image
     mybutton.drawOutline = false
     mybutton.outlineColour = {1,1,1,1}
     mybutton.label = ""
