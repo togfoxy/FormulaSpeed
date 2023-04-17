@@ -43,7 +43,6 @@ function buttons.getButtonID(rx, ry)
 			-- print(rx, ry, button.x, button.y, button.width, button.height)
 			if rx >= button.x and rx <= button.x + button.width and
 				ry >= button.y and ry <= button.y + button.height then
--- print("buttons.getButtonID " .. button.identifier)
 					return button.identifier
 			end
 		end
@@ -90,8 +89,6 @@ function buttons.drawButtons()
             love.graphics.setColor(button.labelcolour)
 			-- love.graphics.setFont(FONT[enum.fontDefault])        --! the font should be a setting and not hardcoded here
 			love.graphics.print(tostring(button.label), button.x + labelxoffset, button.y + 5)
-
--- print(button.label)
 		end
 	end
 
