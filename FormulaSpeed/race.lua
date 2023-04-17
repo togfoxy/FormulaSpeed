@@ -493,11 +493,28 @@ local function executeLegalMove(carindex, desiredcell)
     cars[carindex].movesleft = cars[carindex].movesleft - 1
     cars[carindex].isSpun = false       -- the act of moving causes unspin
 
+    -- check if car is moving off grid
     if racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then
         -- car was on the finish but moved off it. It is now 'off grid'
         cars[carindex].isOffGrid = true
     end
 
+    -- check if car moving over oil slick
+    if oilslick[desiredcell] == true then
+        -- 20% chance of taking road handling damage
+        if love.math.random(1, 100) <= 20 then
+            -- oops
+            cars[carindex].wphandling = cars[carindex].wphandling - 1
+            if cars[carindex].wphandling < 1 then
+                -- eliminated
+                eliminateCar(carindex, true)
+                local txt = "Car #" .. carindex .. " has lost road handling and is eliminated"
+                lovelyToasts.show(txt, 10, "middle")
+            end
+        end
+    end
+
+    -- check if end of turn
     if cars[carindex].movesleft < 1 then
         -- end of turn
         cars[carindex].movesleft = 0
@@ -624,7 +641,6 @@ local function executeLegalMove(carindex, desiredcell)
         local success = fileops.saveTrackKnowledge(trackknowledge)
         print("Knowledge save success: " .. tostring(success))
         -- print(inspect(trackknowledge))
-
     end
 
     if cars[1].isEliminated or cars[1].hasFinished then
@@ -1327,8 +1343,6 @@ function race.update(dt)
         TRANSLATEY = racetrack[cars[1].cell].y
         cam:setPos(TRANSLATEX, TRANSLATEY)
     end
-
-    oilslick[274] = true
 
     pausetimer = pausetimer - dt
     if pausetimer < 0 then pausetimer = 0 end
