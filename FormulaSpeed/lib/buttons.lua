@@ -37,7 +37,7 @@ function buttons.getButtonID(rx, ry)
 	-- check if mouse click is inside any button
 	-- mx, my = mouse click X/Y
 	-- returns the identifier of the button (enum) or nil
-    local currentscene = cf.CurrentScreenName(SCREEN_STACK)
+    local currentscene = cf.currentScreenName(SCREEN_STACK)
     for k, button in pairs(GUI_BUTTONS) do
 		if button.scene == currentscene and button.visible then
 			-- print(rx, ry, button.x, button.y, button.width, button.height)
@@ -63,7 +63,7 @@ end
 function buttons.drawButtons()
 
     -- draw buttons
-    local currentscene = cf.CurrentScreenName(SCREEN_STACK)
+    local currentscene = cf.currentScreenName(SCREEN_STACK)
 
 	for k, button in pairs(GUI_BUTTONS) do
 		if button.scene == currentscene and button.visible then

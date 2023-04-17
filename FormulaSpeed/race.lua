@@ -13,6 +13,7 @@ local gearstick = {}            -- made this a table so I can do graphics stuff
 
 local ghost = {}                -- tracks the ghosts movements
 local history = {}              -- eg history[1][12] = cell 29     (car 1, turn 12, cell 29)
+local oilslick = {}             -- track where the oil slicks are eg oilslick[33] = true
 
 local EDIT_MODE = false                -- true/false
 
@@ -22,10 +23,11 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
-local function eliminateCar(carindex, isSpun)
+local function eliminateCar(carindex, isSpun, msg)
     -- it has been determined this car needs to be eliminated
     -- operates on global PODIUM
     -- input: isSpun = set to true if car is to spin and eliminate
+    -- input: msg = string to display in toast message
     cars[carindex].isEliminated = true
     cars[carindex].isSpun = isSpun
     cars[carindex].movesleft = 0
@@ -33,6 +35,17 @@ local function eliminateCar(carindex, isSpun)
     thiswin.car = carindex
     thiswin.turns = 999
     table.insert(PODIUM, thiswin)
+
+    if msg ~= nil then
+        lovelyToasts.show(txt, 10, "middle", msg)
+    else
+        print("Elimination without a msg!")
+        error()
+    end
+
+    -- add an oil slick
+    local cell = cars[carindex].cell
+    oilslick[cell] = true
 end
 
 local function getForwardCornerCells(cell)
@@ -230,13 +243,14 @@ end
 local function isCellClear(cellindex)
 	-- returns true if no cars are on the provided cell
 	for k, v in pairs(cars) do
-        if not v.hasFinished then
-    		if v.cell == cellindex then
-    			-- cell is not clear
-    			return false
-    		end
+        if v.hasFinished or v.isEliminated then
+            -- do nothing. cell is clear
+        else
+            if v.cell == cellindex then
+                return false
+            end
         end
-	end
+    end
 	return true
 end
 
@@ -487,16 +501,33 @@ local function executeLegalMove(carindex, desiredcell)
     cars[carindex].movesleft = cars[carindex].movesleft - 1
     cars[carindex].isSpun = false       -- the act of moving causes unspin
 
+    -- check if car is moving off grid
     if racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then
         -- car was on the finish but moved off it. It is now 'off grid'
         cars[carindex].isOffGrid = true
     end
 
+    -- check if car moving over oil slick
+    if oilslick[desiredcell] == true then
+        -- 20% chance of taking road handling damage
+        if love.math.random(1, 100) <= 20 then
+            -- oops
+            cars[carindex].wphandling = cars[carindex].wphandling - 1
+            if cars[carindex].wphandling < 1 then
+                -- eliminated
+                local txt = "Car #" .. carindex .. " has lost road handling and is eliminated"
+                eliminateCar(carindex, true, txt)
+
+            end
+        end
+    end
+
+    -- check if end of turn
     if cars[carindex].movesleft < 1 then
         -- end of turn
         cars[carindex].movesleft = 0
 
-        -- add to history. This tracks which cell the car landed on for each turn
+        -- add to history if off grid. This tracks which cell the car landed on at the end of each turn
         if cars[carindex].isOffGrid then
             history[carindex][numberofturns] = cars[carindex].cell
         end
@@ -505,6 +536,33 @@ local function executeLegalMove(carindex, desiredcell)
         -- print("Checking if desired cell# " .. desiredcell .. " is a corner")
         if racetrack[desiredcell].isCorner then     -- desired cell is actually current cell
             cars[carindex].brakestaken = cars[carindex].brakestaken + 1
+        end
+
+        -- check for motor strain. Happens if dice rolls the extreme limit of gear 5 or 6
+        if diceroll == cars[carindex].gearbox[5][2] or diceroll == cars[carindex].gearbox[6][2] then
+            -- engine check for ALL players in gear 5 or 6
+            print("Engine strain check")
+            for i = 1, numofcars do
+                if cars[i].isEliminated or cars[i].isFinish then
+                    -- do nothing
+                else
+                    if cars[i].gear > 4 then
+                        -- 20% chance of engine damage
+                        if love.math.random(1,100) <= 20 then
+                            -- oops. Engine damaged
+                            cars[i].wpengine = cars[i].wpengine - 1
+                            oilslick[cars[i].cell] = true               -- place oil slick
+                            if cars[i].wpengine < 1 then
+                                local txt = "Car #" .. carindex .. " has blown an engine and is eliminated"
+                                eliminateCar(carindex, true, txt)
+                            else
+                                local txt = "Car #" .. carindex .. " has suffers engine damage"
+                                lovelyToasts.show(txt, 10, "middle")
+                            end
+                        end
+                    end
+                end
+            end
         end
     end
 
@@ -518,10 +576,8 @@ local function executeLegalMove(carindex, desiredcell)
             -- overshoot
             if brakescore >= 2 then
                 -- elimination
-                eliminateCar(carindex, true)
                 local txt = "Car #" .. carindex .. " ignored yellow flag and is eliminated"
-                lovelyToasts.show(txt, 10, "middle")
-
+                eliminateCar(carindex, true, txt)
             else        -- brakescore == 1
                 -- see how many cells was overshot
                 -- some complex rules about spinning etc
@@ -542,9 +598,8 @@ local function executeLegalMove(carindex, desiredcell)
                         lovelyToasts.show(txt, 10, "middle")
                     elseif originalmovesleft > cars[carindex].wptyres then
                         -- crash out
-                        eliminateCar(carindex, true)
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is greater than tyre wear points")
-                        lovelyToasts.show(txt, 10, "middle")
+                        eliminateCar(carindex, true, txt)
                     end
                 elseif cars[carindex].wptyres == 0 then
                     -- special rules when wptyres == 0
@@ -554,23 +609,21 @@ local function executeLegalMove(carindex, desiredcell)
                         cars[carindex].movesleft = 0
                         if originalmovesleft > 1 then
                             -- crash out
-                            eliminateCar(carindex, true)
                             txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is > 1 while out of tyre wear points")
-                            lovelyToasts.show(txt, 10, "middle")
+                            eliminateCar(carindex, true, txt)
                         else
                             txt = ("Car #" .. carindex .. " has spun and now has 0 tyre wear points")
                             lovelyToasts.show(txt, 10, "middle")
                         end
                     elseif originalmovesleft > 1 then
                         -- crash
-                        eliminateCar(carindex, true)
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount > 1 while out of tyre wear points")
-                        lovelyToasts.show(txt, 10, "middle")
+                        eliminateCar(carindex, true, txt)
                     else
-                        error("Oops. Unexpected code executed", 394)
+                        error("Oops. Unexpected code executed", 620)
                     end
                 else
-                    error("Oops. Unexpected code executed", 399)
+                    error("Oops. Unexpected code executed", 623)
                 end
             end
         end
@@ -588,7 +641,7 @@ local function executeLegalMove(carindex, desiredcell)
         thiswin.turns = numberofturns
         table.insert(PODIUM, thiswin)
 
-        lovelyToasts.show("Lap time = " .. numberofturns, 15, "middle")
+        lovelyToasts.show("Lap time = " .. numberofturns, 10, "middle")
 
         -- see if this lap performance should replace the ghost
         if carindex == 1 then   -- ghost is only for player 1
@@ -618,7 +671,6 @@ local function executeLegalMove(carindex, desiredcell)
         local success = fileops.saveTrackKnowledge(trackknowledge)
         print("Knowledge save success: " .. tostring(success))
         -- print(inspect(trackknowledge))
-
     end
 
     if cars[1].isEliminated or cars[1].hasFinished then
@@ -668,6 +720,32 @@ local function moveBots()
     cars[currentplayer].gear = botSelectGear(currentplayer)
     addCarMoves(currentplayer)       -- assumes the gear has been set
     applyMoves(currentplayer)
+end
+
+local function applyBrake(carindex)
+    -- apply brakes 1 time and deal with outcome
+    -- check there are moves left
+    if cars[carindex].movesleft > 0 then
+        -- see if there are brake points left
+        if cars[carindex].wpbrakes > 0 then
+            cars[carindex].movesleft = cars[carindex].movesleft - 1
+            cars[carindex].wpbrakes = cars[carindex].wpbrakes - 1
+            local txt = "Car #" .. carindex .. " used 1 brake point"
+            lovelyToasts.show(txt, 10, "middle")
+
+            if cars[1].movesleft < 1 then
+                cars[1].movesleft = 0
+                cars[1].turns = cars[1].turns + 1
+                incCurrentPlayer()
+            end
+        else
+            if carindex == 1 then
+                lovelyToasts.show("No brake points available!", 10, "middle")
+            end
+        end
+    else
+        -- trying to use brake when no moves left is silly. Do nothing
+    end
 end
 
 local function drawGearStick(currentgear)
@@ -768,7 +846,6 @@ function race.keypressed( key, scancode, isrepeat )
 	if rightpressed then TRANSLATEX = TRANSLATEX + translatefactor end
 	if uppressed then TRANSLATEY = TRANSLATEY - translatefactor end
 	if downpressed then TRANSLATEY = TRANSLATEY + translatefactor end
-
 end
 
 function race.keyreleased(key, scancode)
@@ -875,6 +952,12 @@ function race.mousereleased(rx, ry, x, y, button)
     if EDIT_MODE == false then
         if currentplayer == 1 then
             if button == 1 then
+                -- see if the brake button is pressed
+                local clickedButtonID = buttons.getButtonID(rx, ry)
+                if clickedButtonID == enum.buttonBrake then
+                    applyBrake(1)       -- carindex 1 == player
+                end
+
                 -- see if a gear is selected
                 if cars[1].movesleft == 0 then
                     local smallestdist = 999999
@@ -905,20 +988,21 @@ function race.mousereleased(rx, ry, x, y, button)
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].gear = desiredgear
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox point used", 15, "middle")
+                                    lovelyToasts.show("Gearbox point used", 10, "middle")
                                 elseif gearchange == -3 then -- a rapid shift down. Damage gearbox
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].wpbrakes = cars[1].wpbrakes - 1
                                     cars[1].gear = desiredgear
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox and brake point used", 15, "middle")
+                                    lovelyToasts.show("Gearbox and brake point used", 10, "middle")
                                 elseif gearchange == -4 then -- a rapid shift down. Damage gearbox
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].wpbrakes = cars[1].wpbrakes - 1
                                     cars[1].wpengine = cars[1].wpengine - 1
                                     cars[1].gear = desiredgear
+                                    oilslick[cars[1].cell] = true
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox, brake and engine point used", 15, "middle")
+                                    lovelyToasts.show("Gearbox, brake and engine point used", 10, "middle")
                                 else
                                     -- illegal shift. Do nothing
                                 end
@@ -1053,24 +1137,35 @@ function race.draw()
     love.graphics.setColor(1,1,1,1)
     love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
 
+    -- draw the oil on top of the background
+    for k, v in pairs(oilslick) do
+        if v == true then
+            local drawx = racetrack[k].x
+            local drawy = racetrack[k].y
+            local rotation = racetrack[k].rotation
+            love.graphics.setColor(1,1,1,1)
+            love.graphics.draw(IMAGE[enum.imageOil], drawx, drawy, rotation, 1, 1, 30, 13)
+        end
+    end
+
     -- draw the cars
     for i = 1, numofcars do
         local drawx = racetrack[cars[i].cell].x
         local drawy = racetrack[cars[i].cell].y
 
         if cars[i].isEliminated then
-            love.graphics.setColor(1,0,0,1)     -- red for crash
+            -- don't draw the car
         else
             love.graphics.setColor(1,1,1,1)     -- white
-        end
-        local rotation = racetrack[cars[i].cell].rotation
-        if cars[i].isSpun then      -- draw car backwards
-            rotation = rotation + math.pi   -- pi = half a circle (in radians)
-            if rotation > 2 * math.pi then
-                rotation = rotation - (2 * math.pi)
+            local rotation = racetrack[cars[i].cell].rotation
+            if cars[i].isSpun then      -- draw car backwards
+                rotation = rotation + math.pi   -- pi = half a circle (in radians)
+                if rotation > 2 * math.pi then
+                    rotation = rotation - (2 * math.pi)
+                end
             end
+            love.graphics.draw(CARIMAGE[i], drawx, drawy, rotation , 1, 1, 32, 15)
         end
-        love.graphics.draw(CARIMAGE[i], drawx, drawy, rotation , 1, 1, 32, 15)
     end
 
     -- draw number of moves left beside the mouse
@@ -1259,6 +1354,11 @@ function race.draw()
             end
         end
     end
+
+    -- hack
+    if currentplayer == 1 then
+        buttons.drawButtons()
+    end
 end
 
 function race.update(dt)
@@ -1288,6 +1388,44 @@ function race.update(dt)
 
     cam:setZoom(ZOOMFACTOR)
     cam:setPos(TRANSLATEX,	TRANSLATEY)
+end
+
+function race.loadButtons()
+    -- call this from love.load()
+    -- ensure buttons.drawButtons() is added to the scene.draw() function
+    -- ensure scene.mousereleased() function is added
+
+    local numofbuttons = 1      -- how many buttons on this form, assuming a single column
+    local numofsectors = numofbuttons + 1
+
+    -- button for brake
+    local mybutton = {}
+    local buttonsequence = 1            -- sequence on the screen
+    mybutton.x = SCREEN_WIDTH - 185
+    mybutton.y = SCREEN_HEIGHT - 275
+    mybutton.width = 110               -- use this to define click zone on images
+    mybutton.height = 35
+    mybutton.bgcolour = {1,1,1,0}       -- set alpha to zero if drawing an image
+    mybutton.drawOutline = false
+    mybutton.outlineColour = {1,1,1,1}
+    mybutton.label = ""
+    mybutton.image = IMAGE[enum.imageBrakeButton]
+    mybutton.imageoffsetx = 0
+    mybutton.imageoffsety = 0
+    mybutton.imagescalex = 0.5
+    mybutton.imagescaley = 0.5
+    mybutton.labelcolour = {1,1,1,1}
+    mybutton.labeloffcolour = {1,1,1,1}
+    mybutton.labeloncolour = {1,1,1,1}
+    mybutton.labelcolour = {0,0,0,1}
+    mybutton.labelxoffset = 15
+
+    mybutton.state = "on"
+    mybutton.visible = true
+    mybutton.scene = enum.sceneRace               -- change and add to enum
+    mybutton.identifier = enum.buttonBrake     -- change and add to enum
+    table.insert(GUI_BUTTONS, mybutton) -- this adds the button to the global table
+
 end
 
 return race
