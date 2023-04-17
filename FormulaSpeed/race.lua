@@ -462,6 +462,15 @@ local function addCarMoves(carindex)
     if carindex > 1 then
         print("Dice roll for car #" .. carindex .. " is " .. diceroll)
     end
+
+    -- add move to the log file for this car
+    -- happens start of every move and is used for the bots AI. Different to history[] which is used for the ghost
+    -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 on dice roll
+    local currentcell = cars[carindex].cell
+    if cars[carindex].log[currentcell] == nil then     -- at this point, desiredcell = cars[1].cell
+        cars[carindex].log[currentcell] = {}
+    end
+    cars[carindex].log[currentcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
 end
 
 local function executeLegalMove(carindex, desiredcell)
@@ -485,14 +494,6 @@ local function executeLegalMove(carindex, desiredcell)
         if cars[carindex].isOffGrid then
             history[carindex][numberofturns] = cars[carindex].cell
         end
-
-        -- add move to the log file for this car
-        -- happens end of every move and is used for the bots AI. Different to history[] which is used for the ghost
-        -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 moves left
-        if cars[carindex].log[desiredcell] == nil then     -- at this point, desiredcell = cars[1].cell
-            cars[carindex].log[desiredcell] = {}
-        end
-        cars[carindex].log[desiredcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
 
         -- give credit for braking in corner
         -- print("Checking if desired cell# " .. desiredcell .. " is a corner")
@@ -619,6 +620,7 @@ local function executeLegalMove(carindex, desiredcell)
 end
 
 local function botSelectGear(botnumber)
+    -- purely random and needs to be improved
     local rnd = love.math.random(-1, 1)
     local result = cars[botnumber].gear + rnd
     if result < 1 then result = 1 end
@@ -725,6 +727,20 @@ local function drawGearboxMatrix()
     end
 end
 
+function drawKnowledge()
+    -- called from race.draw to display bot track knowledge
+    for k, v in pairs(racetrack) do
+        if trackknowledge[k] ~= nil then
+            local drawx = racetrack[k].x
+            local drawy = racetrack[k].y
+
+            love.graphics.setColor(0,0,0,1)
+            love.graphics.print(trackknowledge[k].moves, drawx, drawy)
+
+        end
+    end
+end
+
 function race.keypressed( key, scancode, isrepeat )
 	-- this is in keypressed because the keyrepeat needs to be detected.
 
@@ -742,6 +758,7 @@ function race.keypressed( key, scancode, isrepeat )
 	if rightpressed then TRANSLATEX = TRANSLATEX + translatefactor end
 	if uppressed then TRANSLATEY = TRANSLATEY - translatefactor end
 	if downpressed then TRANSLATEY = TRANSLATEY + translatefactor end
+
 end
 
 function race.keyreleased(key, scancode)
@@ -1082,6 +1099,11 @@ function race.draw()
                 love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[ghostcell].rotation , 1, 1, 32, 15)
             end
         end
+    end
+
+    -- draw any track knowledge known to the bots
+    if love.keyboard.isDown("k") then
+        drawKnowledge()
     end
 
     -- draw any mouse line things

@@ -60,6 +60,8 @@ function love.mousereleased(x, y, button, isTouch)
 
 	if currentscene == enum.sceneRace then
 		race.mousereleased(rx, ry, x, y, button)		-- need to send through the res adjusted x/y and the 'real' x/y
+	elseif currentscene == enum.scenePodium then
+		podium.mousereleased(rx, ry, x, y, button)
 	end
 end
 
@@ -97,6 +99,7 @@ function love.load()
 
 	-- mainmenu.loadButtons()
 	-- credits.loadButtons()
+	-- podium.loadButtons()
 
 	cam = Camera.new(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 1)
 	cam:setZoom(ZOOMFACTOR)

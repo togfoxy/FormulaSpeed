@@ -8,6 +8,8 @@ function enums.load()
     enum.sceneRace = 5
     enum.scenePodium = 6
 
+    enum.buttonPodiumExit = 1
+
     enum.imageCell = 1
     enum.imageCar = 2
     enum.imageTrack = 3
