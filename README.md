@@ -27,6 +27,8 @@ Aim to 'stop' your car on each corner according to the number of times indicated
 
 Failing to stop the required number of times on each corner will result in tyre damage or crash.
 
+Use the BRAKE button to slow your car. This will cost you BRAKE points.
+
 Use the matrix at the top of the screen to see how many squares each gear may take you. The actual number will be a random number in the given range.
 
 For the moment, every new game gives you a random gearbox with random ability.
@@ -35,9 +37,8 @@ The game presents a 'ghost' car if you play more than one game. The ghost reflec
 
 Play the track as many times as you like and beat your personal best time.
 
-DEV NOTES: the game does not end after the first lap (yet). Suggest you close the game and restart when you finish your first lap and try to beat your personal time.
+DEV NOTES: the game supports one lap. Press ESCAPE to close the game when all cars are finished.
 
-DEV NOTES: the game lets you continute racing when you crash. Self-police and close the game when you crash.  ;)
 
 Controls
 ========
