@@ -881,6 +881,12 @@ function race.mousereleased(rx, ry, x, y, button)
     if EDIT_MODE == false then
         if currentplayer == 1 then
             if button == 1 then
+                -- see if the brake button is pressed
+                local clickedButtonID = buttons.getButtonID(rx, ry)
+                if clickedButtonID == enum.buttonBrake then
+                    print("Hi")
+                end
+
                 -- see if a gear is selected
                 if cars[1].movesleft == 0 then
                     local smallestdist = 999999
@@ -1078,18 +1084,18 @@ function race.draw()
         local drawy = racetrack[cars[i].cell].y
 
         if cars[i].isEliminated then
-            love.graphics.setColor(1,0,0,1)     -- red for crash
+            -- don't draw the car
         else
             love.graphics.setColor(1,1,1,1)     -- white
-        end
-        local rotation = racetrack[cars[i].cell].rotation
-        if cars[i].isSpun then      -- draw car backwards
-            rotation = rotation + math.pi   -- pi = half a circle (in radians)
-            if rotation > 2 * math.pi then
-                rotation = rotation - (2 * math.pi)
+            local rotation = racetrack[cars[i].cell].rotation
+            if cars[i].isSpun then      -- draw car backwards
+                rotation = rotation + math.pi   -- pi = half a circle (in radians)
+                if rotation > 2 * math.pi then
+                    rotation = rotation - (2 * math.pi)
+                end
             end
+            love.graphics.draw(CARIMAGE[i], drawx, drawy, rotation , 1, 1, 32, 15)
         end
-        love.graphics.draw(CARIMAGE[i], drawx, drawy, rotation , 1, 1, 32, 15)
     end
 
     -- draw number of moves left beside the mouse
@@ -1250,6 +1256,8 @@ function race.draw()
         drawGearStick(cars[1].gear)
     end
 
+    -- draw the brake button
+
     if not EDIT_MODE then
         -- draw the topbar (gearbox matrix)
         drawGearboxMatrix()
@@ -1278,6 +1286,8 @@ function race.draw()
             end
         end
     end
+
+    buttons.drawButtons()
 end
 
 function race.update(dt)
@@ -1309,6 +1319,44 @@ function race.update(dt)
 
     cam:setZoom(ZOOMFACTOR)
     cam:setPos(TRANSLATEX,	TRANSLATEY)
+end
+
+function race.loadButtons()
+    -- call this from love.load()
+    -- ensure buttons.drawButtons() is added to the scene.draw() function
+    -- ensure scene.mousereleased() function is added
+
+    local numofbuttons = 1      -- how many buttons on this form, assuming a single column
+    local numofsectors = numofbuttons + 1
+
+    -- button for exit
+    local mybutton = {}
+    local buttonsequence = 1            -- sequence on the screen
+    mybutton.x = SCREEN_WIDTH - 185
+    mybutton.y = SCREEN_HEIGHT - 275
+    mybutton.width = 125
+    mybutton.height = 25
+    mybutton.bgcolour = {1,1,1,1}
+    mybutton.drawOutline = false
+    mybutton.outlineColour = {1,1,1,1}
+    mybutton.label = ""
+    mybutton.image = IMAGE[enum.imageBrakeButton]
+    mybutton.imageoffsetx = 0
+    mybutton.imageoffsety = 0
+    mybutton.imagescalex = 0.5
+    mybutton.imagescaley = 0.5
+    mybutton.labelcolour = {1,1,1,1}
+    mybutton.labeloffcolour = {1,1,1,1}
+    mybutton.labeloncolour = {1,1,1,1}
+    mybutton.labelcolour = {0,0,0,1}
+    mybutton.labelxoffset = 15
+
+    mybutton.state = "on"
+    mybutton.visible = true
+    mybutton.scene = enum.sceneRace               -- change and add to enum
+    mybutton.identifier = enum.buttonBrake     -- change and add to enum
+    table.insert(GUI_BUTTONS, mybutton) -- this adds the button to the global table
+
 end
 
 return race

@@ -99,7 +99,9 @@ function love.load()
 
 	-- mainmenu.loadButtons()
 	-- credits.loadButtons()
-	-- podium.loadButtons()
+	race.loadButtons()
+	podium.loadButtons()
+
 
 	cam = Camera.new(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 1)
 	cam:setZoom(ZOOMFACTOR)
