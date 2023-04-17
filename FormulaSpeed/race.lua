@@ -2,7 +2,7 @@ race = {}
 
 local racetrack = {}          -- the network of cells
 local cars = {}               -- a table of cars
-local numofcars = 2
+local numofcars = 6
 
 local celllength = 128
 local cellwidth = 64
@@ -1148,7 +1148,6 @@ function race.draw()
         end
     end
 
-
     -- draw the cars
     for i = 1, numofcars do
         local drawx = racetrack[cars[i].cell].x
@@ -1327,8 +1326,6 @@ function race.draw()
         drawGearStick(cars[1].gear)
     end
 
-    -- draw the brake button
-
     if not EDIT_MODE then
         -- draw the topbar (gearbox matrix)
         drawGearboxMatrix()
@@ -1358,7 +1355,10 @@ function race.draw()
         end
     end
 
-    buttons.drawButtons()
+    -- hack
+    if currentplayer == 1 then
+        buttons.drawButtons()
+    end
 end
 
 function race.update(dt)
