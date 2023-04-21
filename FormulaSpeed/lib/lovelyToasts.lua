@@ -51,36 +51,39 @@ end
 function lovelyToasts.draw()
 	if #_toasts > 0 then
 		local current = _toasts[1]
+		
+		if current.text ~= nil then
 
-		-- Store current font and color to restore later
-		local r, g, b, a = love.graphics.getColor()
-		local font = love.graphics.getFont()
+			-- Store current font and color to restore later
+			local r, g, b, a = love.graphics.getColor()
+			local font = love.graphics.getFont()
 
-		local textWidth = lovelyToasts.style.font:getWidth(current.text)
-		local textHeight = lovelyToasts.style.font:getHeight()
-		local textX = (love.graphics.getWidth() / 2) - (textWidth / 2)
-		local textY = lovelyToasts._yForPosition(current.position) - (textHeight / 2) + current._yOffset
+			local textWidth = lovelyToasts.style.font:getWidth(current.text)
+			local textHeight = lovelyToasts.style.font:getHeight()
+			local textX = (love.graphics.getWidth() / 2) - (textWidth / 2)
+			local textY = lovelyToasts._yForPosition(current.position) - (textHeight / 2) + current._yOffset
 
-		-- Draw toast background
-		local bgR, bgG, bgB, bgA = unpack(lovelyToasts.style.backgroundColor)
-		love.graphics.setColor(bgR, bgG, bgB, (bgA or 0.5) * (current._alpha / 100))
-		love.graphics.rectangle("fill", 
-			textX - lovelyToasts.style.paddingLR,
-			textY - lovelyToasts.style.paddingTB,
-			textWidth + (lovelyToasts.style.paddingLR * 2),
-			textHeight + (lovelyToasts.style.paddingTB * 2),
-			10, 10, 1000
-		)
+			-- Draw toast background
+			local bgR, bgG, bgB, bgA = unpack(lovelyToasts.style.backgroundColor)
+			love.graphics.setColor(bgR, bgG, bgB, (bgA or 0.5) * (current._alpha / 100))
+			love.graphics.rectangle("fill", 
+				textX - lovelyToasts.style.paddingLR,
+				textY - lovelyToasts.style.paddingTB,
+				textWidth + (lovelyToasts.style.paddingLR * 2),
+				textHeight + (lovelyToasts.style.paddingTB * 2),
+				10, 10, 1000
+			)
 
-		-- Draw toast title
-		local tR, tG, tB, tA = unpack(lovelyToasts.style.textColor)
-		love.graphics.setColor(tR, tG, tB, (tA or 1) * (current._alpha / 100))
-		love.graphics.setFont(lovelyToasts.style.font)
-		love.graphics.print(current.text, textX, textY)
+			-- Draw toast title
+			local tR, tG, tB, tA = unpack(lovelyToasts.style.textColor)
+			love.graphics.setColor(tR, tG, tB, (tA or 1) * (current._alpha / 100))
+			love.graphics.setFont(lovelyToasts.style.font)
+			love.graphics.print(current.text, textX, textY)
 
-		-- Restore color and font
-		love.graphics.setColor(r, g, b, a)
-		love.graphics.setFont(font)
+			-- Restore color and font
+			love.graphics.setColor(r, g, b, a)
+			love.graphics.setFont(font)
+		end
 	end
 end
 
