@@ -156,6 +156,9 @@ local function incCurrentPlayer()
     -- if there are no cars in play then prep the next scene
     if #players == 0 then
         cf.swapScreen(enum.scenePodium, SCREEN_STACK)   -- note: doing this doesn't stop the rest of the below code executing
+        print("All cars finished or eliminated")
+        currentplayer = 0
+        racetrack = {}
     end
 
     -- custom sort the table of cars that are still in play
@@ -187,8 +190,10 @@ local function incCurrentPlayer()
             table.insert(turntable, cars[i].turns)
         end
     end
-    table.sort(turntable)
-    numberofturns = turntable[1]
+    if #turntable > 0 then      -- this stops numberofturns setting to nil
+        table.sort(turntable)
+        numberofturns = turntable[1]
+    end
 
     if currentplayer == 1 and not cars[1].isEliminated then
         TRANSLATEX = racetrack[cars[1].cell].x
@@ -1558,6 +1563,10 @@ function race.update(dt)
         if pausetimer <= 0 then
             moveBots()
         end
+    elseif currentplayer == 0 then
+        -- race over
+        racetrack = {}      --! probably need to check for trainer mode
+        cars = {}
     else
     end
 
@@ -1606,29 +1615,3 @@ function race.loadButtons()
 end
 
 return race
-
-
--- ****************************************************************
--- this code inspects the whol path and removes the whole path if there is a single blockage
--- local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
---
--- -- print("This is the first path:")
--- -- print(inspect(allpaths[1]))
---
--- -- cycle through all the paths and remove the one's that are blocked
--- for i = #allpaths, 1, -1 do
---     -- for this path, i, scan for a block
---     local deletepath = false
---     for j = #allpaths[i], 1, -1 do          -- loop through every cell in this one path
---         if not isCellClear(allpaths[i][j]) then
---             deletepath = true
---             print("Cell #" .. allpaths[i][j] .. " is blocked")
---         end
---     end
---     -- after looping, see if path should be removed
---     if deletepath then
---         table.remove(allpaths, i)
---         print("Removing whole path")
---     end
--- end
--- **********************************************************************
