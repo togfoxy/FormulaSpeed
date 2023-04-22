@@ -357,21 +357,21 @@ local function loadCars()
         end
 
         -- ** debugging: tight grid to test blocking **
-        -- if i == 1 then
-        --     cars[i].cell = 164
-        -- elseif i == 2 then
-        --     cars[i].cell = 448
-        -- elseif i == 3 then
-        --     cars[i].cell = 435
-        -- elseif i == 4 then
-        --     cars[i].cell = 163
-        -- elseif i == 5 then
-        --     cars[i].cell = 447
-        -- elseif i == 6 then
-        --     cars[i].cell = 434
-        -- else
-        --     error("Too many cars loaded.", 148)
-        -- end
+        if i == 1 then
+            cars[i].cell = 164
+        elseif i == 2 then
+            cars[i].cell = 448
+        elseif i == 3 then
+            cars[i].cell = 435
+        elseif i == 4 then
+            cars[i].cell = 163
+        elseif i == 5 then
+            cars[i].cell = 447
+        elseif i == 6 then
+            cars[i].cell = 434
+        else
+            error("Too many cars loaded.", 148)
+        end
 
 
         cars[i].gear = 0
@@ -1057,12 +1057,16 @@ function race.mousereleased(rx, ry, x, y, button)
 
                         if desiredcell ~= nil then
                             if racetrack[currentcell].link[desiredcell] == true then
-                                -- move is legal
-                                executeLegalMove(1, desiredcell)
-                                if cars[1].movesleft < 1 then
-                                    cars[1].movesleft = 0
-                                    cars[1].turns = cars[1].turns + 1
-                                    incCurrentPlayer()
+                                -- move is legal but is cell blocked?
+                                if isCellClear(desiredcell) then
+                                    executeLegalMove(1, desiredcell)
+                                    if cars[1].movesleft < 1 then
+                                        cars[1].movesleft = 0
+                                        cars[1].turns = cars[1].turns + 1
+                                        incCurrentPlayer()
+                                    end
+                                else
+                                    --! put some sort of beeping noise to say it's an illegal move
                                 end
                             end
                         else
