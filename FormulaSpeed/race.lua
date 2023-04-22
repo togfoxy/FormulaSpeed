@@ -283,10 +283,37 @@ local function findClearPath(stack, fromcell, movesleft)
             end
         end
     end
-    print("I think car is blocked and all links exhausted. Maybe?")     --!
+    print("Car is blocked")     --! needs to do proper stack reversal
+    print(inspect(stack))
     stepsneeded = 0
-    return {}       -- a signal that a path could not be found
+
+    return {}       -- a signal that a path could not be found      --! need to return the number of moves not spent
     -- return stack
+end
+
+local function getAllPaths(rootcell, movesneeded, path, allpaths)
+    -- this took about 6 hours to write. Don't ask me how it works
+    assert(movesneeded > 0)
+
+    -- print(rootcell)
+    -- print(movesneeded)
+    -- print(path)
+    -- print(allpaths)
+
+    for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
+        if link == true then
+            table.insert(path, linkedcellnumber)
+            if #path >= movesneeded then
+                local temptable = cf.deepcopy(path)
+                table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
+                table.insert(allpaths, temptable)
+            else
+                local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
+            end
+        end
+    end
+    table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
+    return(allpaths)
 end
 
 local function removeLinksToCell(cell)
@@ -330,6 +357,10 @@ local function loadRaceTrack()
     else
         print("Track knowledge loaded.")
     end
+
+    -- local allpaths = getAllPaths(203, 5, {}, {})
+    -- print("Results of allpath:")
+    -- print(inspect(allpaths))
 end
 
 local function loadCars()
@@ -355,21 +386,21 @@ local function loadCars()
         end
 
         -- ** debugging: tight grid to test blocking **
-        -- if i == 1 then
-        --     cars[i].cell = 164
-        -- elseif i == 2 then
-        --     cars[i].cell = 448
-        -- elseif i == 3 then
-        --     cars[i].cell = 435
-        -- elseif i == 4 then
-        --     cars[i].cell = 163
-        -- elseif i == 5 then
-        --     cars[i].cell = 447
-        -- elseif i == 6 then
-        --     cars[i].cell = 434
-        -- else
-        --     error("Too many cars loaded.", 148)
-        -- end
+        if i == 1 then
+            cars[i].cell = 164
+        elseif i == 2 then
+            cars[i].cell = 448
+        elseif i == 3 then
+            cars[i].cell = 435
+        elseif i == 4 then
+            cars[i].cell = 163
+        elseif i == 5 then
+            cars[i].cell = 447
+        elseif i == 6 then
+            cars[i].cell = 434
+        else
+            error("Too many cars loaded.", 148)
+        end
 
 
         cars[i].gear = 0
@@ -477,6 +508,7 @@ local function addCarMoves(carindex)
     cars[carindex].movesleft = diceroll
 
     if carindex > 1 then
+        print("*************************")
         print("Dice roll for car #" .. carindex .. " is " .. diceroll)
     end
 
@@ -489,7 +521,7 @@ local function addCarMoves(carindex)
             cars[carindex].log[currentcell] = {}
         end
         cars[carindex].log[currentcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
-        print("Adding dice roll " .. diceroll .. " to cell #" .. currentcell)
+        -- print("Adding dice roll " .. diceroll .. " to car log for cell #" .. currentcell)
     end
 end
 
@@ -690,10 +722,63 @@ local function botSelectGear(botnumber)
     return result
 end
 
+local function returnBestPath(carindex)
+
+    local startcell = cars[carindex].cell
+    local movesleft = cars[carindex].movesleft
+
+    local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
+
+    print("All available paths:" .. inspect(allpaths))
+
+    -- traverse each path. If a block is found then delete that cell and every cell after that block
+    for i = #allpaths, 1, -1 do
+       -- scan this path (i) for a blockage
+       print("Scanning this path for a block: " .. inspect(allpaths[i]))
+       local blockedcell        -- nil
+       for j = 1, #allpaths[i] do
+            if not isCellClear(allpaths[i][j]) then
+                -- truncate this table at this point (j)
+                for k = #allpaths[i], j, -1 do
+                    print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
+                    table.remove(allpaths[i])
+
+                end
+                print("Path is now " .. inspect(allpaths[i]))
+                break
+            end
+        end
+    end
+
+    print("Valid paths reduced to: " .. inspect(allpaths))
+
+    -- cycle through once again and get the longest path. This means brake points won't be needed
+    local longestpath
+    local longestpathindex
+    for i = 1, #allpaths do
+        if #allpaths[i] > 0 then
+            -- path is not empty
+            if longestpath == nil or #allpaths[i] > longestpath then
+                -- this is the new longest path
+                longestpath = #allpaths[i]
+                longestpathindex = i
+            end
+        end
+    end
+
+    --! if all paths are deleted then all paths are blocked. Need to choose the longest unblocked path
+    if longestpathindex == nil then
+        error("No valid paths")
+    end
+
+    return allpaths[longestpathindex]
+end
+
 local function applyMoves(carindex)
 
     local path = {}
-    path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
+    -- path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
+    path = returnBestPath(carindex)
     -- print("Found a path:")
     -- print(inspect(path))
 
@@ -815,7 +900,7 @@ local function drawGearboxMatrix()
     end
 end
 
-function drawKnowledge()
+local function drawKnowledge()
     -- called from race.draw to display bot track knowledge
     for k, v in pairs(racetrack) do
         if trackknowledge ~= nil and trackknowledge[k] ~= nil then
@@ -827,6 +912,41 @@ function drawKnowledge()
 
         end
     end
+end
+
+local function drawSidebar()
+    local drawx = SCREEN_WIDTH - sidebarwidth
+    love.graphics.setColor(0, 0, 0, 0.75)
+    love.graphics.rectangle("fill", drawx, 0, sidebarwidth, SCREEN_HEIGHT)
+
+    drawx = drawx + 10
+    drawy = 75
+
+    love.graphics.setColor(1,1,1,1)
+
+    love.graphics.print("Turns: " .. numberofturns, drawx, drawy)
+    drawy = drawy + 35
+
+    love.graphics.print("Player #" .. currentplayer, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Gear: " .. cars[currentplayer].gear, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Moves left: " .. cars[currentplayer].movesleft, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Stops in corner: " .. cars[currentplayer].brakestaken, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Tyre wear points: " .. cars[currentplayer].wptyres, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Brake wear points: " .. cars[currentplayer].wpbrakes, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Gearbox wear points: " .. cars[currentplayer].wpgearbox, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Engine wear points: " .. cars[currentplayer].wpengine, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Handling wear points: " .. cars[currentplayer].wphandling, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Body wear points: " .. cars[currentplayer].wpbody, drawx, drawy)
+    drawy = drawy + 35
 end
 
 function race.keypressed( key, scancode, isrepeat )
@@ -1020,12 +1140,16 @@ function race.mousereleased(rx, ry, x, y, button)
 
                         if desiredcell ~= nil then
                             if racetrack[currentcell].link[desiredcell] == true then
-                                -- move is legal
-                                executeLegalMove(1, desiredcell)
-                                if cars[1].movesleft < 1 then
-                                    cars[1].movesleft = 0
-                                    cars[1].turns = cars[1].turns + 1
-                                    incCurrentPlayer()
+                                -- move is legal but is cell blocked?
+                                if isCellClear(desiredcell) then
+                                    executeLegalMove(1, desiredcell)
+                                    if cars[1].movesleft < 1 then
+                                        cars[1].movesleft = 0
+                                        cars[1].turns = cars[1].turns + 1
+                                        incCurrentPlayer()
+                                    end
+                                else
+                                    --! put some sort of beeping noise to say it's an illegal move
                                 end
                             end
                         else
@@ -1133,19 +1257,52 @@ function race.draw()
 
     cam:attach()
 
-    -- draw the track background first
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
+    if love.keyboard.isDown("k") then
+        -- draw the track cells
+        for k, v in pairs(racetrack) do -- k is the index and v is the cell
+            if v.x ~= nil then
+                love.graphics.setColor(1, 1, 1, 1)      -- set colour to white and let it be overridden below
+                if trackknowledge ~= nil and trackknowledge[k] ~= nil then
+                    local drawx = racetrack[k].x
+                    local drawy = racetrack[k].y
+                    love.graphics.setColor(1,1,1,1)
+                    love.graphics.print(trackknowledge[k].moves, drawx, drawy)
 
-    -- draw the oil on top of the background
-    for k, v in pairs(oilslick) do
-        if v == true then
-            local drawx = racetrack[k].x
-            local drawy = racetrack[k].y
-            local rotation = racetrack[k].rotation
-            love.graphics.setColor(1,1,1,1)
-            love.graphics.draw(IMAGE[enum.imageOil], drawx, drawy, rotation, 1, 1, 30, 13)
+                    local cellspeed = trackknowledge[k].moves
+                    if cellspeed <= 2 then
+                        love.graphics.setColor(1, 0, 0, 1)
+                    elseif cellspeed <= 5 then
+                        love.graphics.setColor(1, 0.6, 0, 1)
+                    elseif cellspeed <= 9 then
+                        love.graphics.setColor(1, 1, 0, 1)
+                    elseif cellspeed <= 14 then
+                        love.graphics.setColor(0, 0.5, 0, 1)
+                    else
+                        love.graphics.setColor(0, 1, 1, 1)
+                    end
+
+
+                end
+                love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+            end
         end
+    else
+
+        -- draw the track background first
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
+
+        -- draw the oil on top of the background
+        for k, v in pairs(oilslick) do
+            if v == true then
+                local drawx = racetrack[k].x
+                local drawy = racetrack[k].y
+                local rotation = racetrack[k].rotation
+                love.graphics.setColor(1,1,1,1)
+                love.graphics.draw(IMAGE[enum.imageOil], drawx, drawy, rotation, 1, 1, 30, 13)
+            end
+        end
+
     end
 
     -- draw the cars
@@ -1270,7 +1427,6 @@ function race.draw()
             end
         end
 
-
         if love.mouse.isDown(2) then
             local cell = getSelectedCell()
             if cell ~= nil then
@@ -1292,34 +1448,8 @@ function race.draw()
     lovelyToasts.draw()     -- should this be before detach?
 
     -- draw the sidebar
-    local drawx = SCREEN_WIDTH - sidebarwidth
-    love.graphics.setColor(0, 0, 0, 0.75)
-    love.graphics.rectangle("fill", drawx, 0, sidebarwidth, SCREEN_HEIGHT)
+    drawSidebar()
 
-    drawx = drawx + 10
-    drawy = 75
-
-    love.graphics.setColor(1,1,1,1)
-
-    love.graphics.print("Turns: " .. numberofturns, drawx, drawy)
-    drawy = drawy + 35
-
-    love.graphics.print("Player #" .. currentplayer, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Gear: " .. cars[currentplayer].gear, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Moves left: " .. cars[currentplayer].movesleft, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Stops in corner: " .. cars[currentplayer].brakestaken, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Tyre wear points: " .. cars[currentplayer].wptyres, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Brake wear points: " .. cars[currentplayer].wpbrakes, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Gearbox wear points: " .. cars[currentplayer].wpgearbox, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Engine wear points: " .. cars[currentplayer].wpengine, drawx, drawy)
-    drawy = drawy + 35
 
     -- draw the gear stick on top of the sidebarwidth
     if currentplayer == 1 then
@@ -1429,3 +1559,29 @@ function race.loadButtons()
 end
 
 return race
+
+
+-- ****************************************************************
+-- this code inspects the whol path and removes the whole path if there is a single blockage
+-- local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
+--
+-- -- print("This is the first path:")
+-- -- print(inspect(allpaths[1]))
+--
+-- -- cycle through all the paths and remove the one's that are blocked
+-- for i = #allpaths, 1, -1 do
+--     -- for this path, i, scan for a block
+--     local deletepath = false
+--     for j = #allpaths[i], 1, -1 do          -- loop through every cell in this one path
+--         if not isCellClear(allpaths[i][j]) then
+--             deletepath = true
+--             print("Cell #" .. allpaths[i][j] .. " is blocked")
+--         end
+--     end
+--     -- after looping, see if path should be removed
+--     if deletepath then
+--         table.remove(allpaths, i)
+--         print("Removing whole path")
+--     end
+-- end
+-- **********************************************************************
