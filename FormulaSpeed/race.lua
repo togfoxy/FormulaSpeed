@@ -508,6 +508,7 @@ local function addCarMoves(carindex)
     cars[carindex].movesleft = diceroll
 
     if carindex > 1 then
+        print("*************************")
         print("Dice roll for car #" .. carindex .. " is " .. diceroll)
     end
 
@@ -728,12 +729,49 @@ local function returnBestPath(carindex)
 
     local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
 
-    -- print("This is the first path:")
-    -- print(inspect(allpaths[1]))
+    print("All available paths:" .. inspect(allpaths))
 
-    return allpaths[1]
+    -- traverse each path. If a block is found then delete that cell and every cell after that block
+    for i = #allpaths, 1, -1 do
+       -- scan this path (i) for a blockage
+       print("Scanning this path for a block: " .. inspect(allpaths[i]))
+       local blockedcell        -- nil
+       for j = 1, #allpaths[i] do
+            if not isCellClear(allpaths[i][j]) then
+                -- truncate this table at this point (j)
+                for k = #allpaths[i], j, -1 do
+                    print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
+                    table.remove(allpaths[i])
 
+                end
+                print("Path is now " .. inspect(allpaths[i]))
+                break
+            end
+        end
+    end
 
+    print("Valid paths reduced to: " .. inspect(allpaths))
+
+    -- cycle through once again and get the longest path. This means brake points won't be needed
+    local longestpath
+    local longestpathindex
+    for i = 1, #allpaths do
+        if #allpaths[i] > 0 then
+            -- path is not empty
+            if longestpath == nil or #allpaths[i] > longestpath then
+                -- this is the new longest path
+                longestpath = #allpaths[i]
+                longestpathindex = i
+            end
+        end
+    end
+
+    --! if all paths are deleted then all paths are blocked. Need to choose the longest unblocked path
+    if longestpathindex == nil then
+        error("No valid paths")
+    end
+
+    return allpaths[longestpathindex]
 end
 
 local function applyMoves(carindex)
@@ -743,8 +781,6 @@ local function applyMoves(carindex)
     path = returnBestPath(carindex)
     -- print("Found a path:")
     -- print(inspect(path))
-
-
 
     -- path can be nil if the car gets blocked
     if #path == 0 then
@@ -1523,3 +1559,29 @@ function race.loadButtons()
 end
 
 return race
+
+
+-- ****************************************************************
+-- this code inspects the whol path and removes the whole path if there is a single blockage
+-- local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
+--
+-- -- print("This is the first path:")
+-- -- print(inspect(allpaths[1]))
+--
+-- -- cycle through all the paths and remove the one's that are blocked
+-- for i = #allpaths, 1, -1 do
+--     -- for this path, i, scan for a block
+--     local deletepath = false
+--     for j = #allpaths[i], 1, -1 do          -- loop through every cell in this one path
+--         if not isCellClear(allpaths[i][j]) then
+--             deletepath = true
+--             print("Cell #" .. allpaths[i][j] .. " is blocked")
+--         end
+--     end
+--     -- after looping, see if path should be removed
+--     if deletepath then
+--         table.remove(allpaths, i)
+--         print("Removing whole path")
+--     end
+-- end
+-- **********************************************************************
