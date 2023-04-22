@@ -259,34 +259,6 @@ local function isCellClear(cellindex)
 	return true
 end
 
-local function getAllPaths(rootcell, movesneeded, path, allpaths)
-    -- this took about 6 hours to write. Don't ask me how it works
-    assert(movesneeded > 0)
-
-    -- print(rootcell)
-    -- print(movesneeded)
-    -- print(path)
-    -- print(allpaths)
-
-    for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
-        if link == true then
-            table.insert(path, linkedcellnumber)
-            if #path >= movesneeded then
-                local temptable = cf.deepcopy(path)
-                table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-                table.insert(allpaths, temptable)
-
-                --! see if this does an early abort because we have found a path that is at least as long as movesleft
-                return(allpaths)
-            else
-                local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
-            end
-        end
-    end
-    table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-    return(allpaths)
-end
-
 local function removeLinksToCell(cell)
     -- scan racetrack and remove all links to cell making it orphaned and ready for deletion
     -- for i = 1, #racetrack do
@@ -702,6 +674,27 @@ local function botSelectGear(botnumber)
     if result < 1 then result = 1 end
     if result > 6 then result = 6 end
     return result
+end
+
+local function getAllPaths(rootcell, movesneeded, path, allpaths)
+    -- this took about 6 hours to write. Don't ask me how it works
+    assert(movesneeded > 0)
+
+    for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
+        if link == true and isCellClear(linkedcellnumber) then
+            table.insert(path, linkedcellnumber)
+            if #path >= movesneeded then
+                local temptable = cf.deepcopy(path)
+                table.insert(allpaths, temptable)
+                table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
+                return(allpaths)        --!
+            else
+                local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
+            end
+        end
+    end
+    table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
+    return(allpaths)
 end
 
 local function returnBestPath(carindex)
