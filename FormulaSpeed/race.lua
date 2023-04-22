@@ -158,7 +158,7 @@ local function incCurrentPlayer()
         cf.swapScreen(enum.scenePodium, SCREEN_STACK)   -- note: doing this doesn't stop the rest of the below code executing
         print("All cars finished or eliminated")
         currentplayer = 0
-        racetrack = {}
+        -- racetrack = {}
     end
 
     -- custom sort the table of cars that are still in play
@@ -259,43 +259,6 @@ local function isCellClear(cellindex)
 	return true
 end
 
-local function findClearPath(stack, fromcell, movesleft)
-	-- starting at fromcell, find a path that uses at least movesleft steps)
-    -- eg cell #1 to cell #25
-    -- input: a table that will start empty and be filled
-    -- input: the cell the path starts at
-    -- input: how many cells to look forward (moves left/dice roll)
-    --! how does this behave when blocked and no path?
-
-	-- local stack = {}
-	local currentcell = fromcell
-	local stepsneeded = movesleft
-    -- print("Car at cell#" .. currentcell .. " about to look for a valid link")
-	for k, v in pairs(racetrack[currentcell].link) do
-        if v == true then       -- ensure the link is valid/real
-            local nextrandomcell = k		-- k is the cell number of the link
-    		if isCellClear(nextrandomcell) then
-                table.insert(stack, nextrandomcell)
-    			stepsneeded = stepsneeded - 1
-                if stepsneeded < 1 then
-                    -- job done
-                    return stack
-                else
-                    -- steps not exhausted yet. Keep going
-                    stack = findClearPath(stack, nextrandomcell, stepsneeded)
-                    return stack
-                end
-            end
-        end
-    end
-    print("Car is blocked")     --! needs to do proper stack reversal
-    print(inspect(stack))
-    stepsneeded = 0
-
-    return {}       -- a signal that a path could not be found      --! need to return the number of moves not spent
-    -- return stack
-end
-
 local function getAllPaths(rootcell, movesneeded, path, allpaths)
     -- this took about 6 hours to write. Don't ask me how it works
     assert(movesneeded > 0)
@@ -312,6 +275,9 @@ local function getAllPaths(rootcell, movesneeded, path, allpaths)
                 local temptable = cf.deepcopy(path)
                 table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
                 table.insert(allpaths, temptable)
+
+                --! see if this does an early abort because we have found a path that is at least as long as movesleft
+                return(allpaths)
             else
                 local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
             end
@@ -550,7 +516,7 @@ local function executeLegalMove(carindex, desiredcell)
     cars[carindex].isSpun = false       -- the act of moving causes unspin
 
     -- check if car is moving off grid
-    if racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then
+    if racetrack[originalcell].isFinish ~= nil and racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then
         -- car was on the finish but moved off it. It is now 'off grid'
         cars[carindex].isOffGrid = true
     end
@@ -577,9 +543,6 @@ local function executeLegalMove(carindex, desiredcell)
 
         -- add to history if off grid. This tracks which cell the car landed on at the end of each turn
         if cars[carindex].isOffGrid then
-            print(carindex, numberofturns)
-            print(inspect(history[carindex][numberofturns]))
-            print(cars[carindex].cell)
             history[carindex][numberofturns] = cars[carindex].cell
         end
 
@@ -1345,79 +1308,82 @@ function race.draw()
         love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
 
         -- draw the oil on top of the background
-        for k, v in pairs(oilslick) do
-            if v == true then
-                local drawx = racetrack[k].x
-                local drawy = racetrack[k].y
-                local rotation = racetrack[k].rotation
-                love.graphics.setColor(1,1,1,1)
-                love.graphics.draw(IMAGE[enum.imageOil], drawx, drawy, rotation, 1, 1, 30, 13)
-            end
-        end
-
-    end
-
-    -- draw the cars
-    for i = 1, numofcars do
-        local drawx = racetrack[cars[i].cell].x
-        local drawy = racetrack[cars[i].cell].y
-
-        if cars[i].isEliminated then
-            -- don't draw the car
-        else
-            love.graphics.setColor(1,1,1,1)     -- white
-            local rotation = racetrack[cars[i].cell].rotation
-            if cars[i].isSpun then      -- draw car backwards
-                rotation = rotation + math.pi   -- pi = half a circle (in radians)
-                if rotation > 2 * math.pi then
-                    rotation = rotation - (2 * math.pi)
+        if currentplayer > 0 then
+            for k, v in pairs(oilslick) do
+                if v == true then
+                    local drawx = racetrack[k].x
+                    local drawy = racetrack[k].y
+                    local rotation = racetrack[k].rotation
+                    love.graphics.setColor(1,1,1,1)
+                    love.graphics.draw(IMAGE[enum.imageOil], drawx, drawy, rotation, 1, 1, 30, 13)
                 end
             end
-            love.graphics.draw(CARIMAGE[i], drawx, drawy, rotation , 1, 1, 32, 15)
         end
     end
 
-    -- draw number of moves left beside the mouse
-    if currentplayer == 1 then
-        if cars[1].movesleft > 0 then
-            drawx, drawy = love.mouse.getPosition()
-            drawx, drawy = cam:toWorld(drawx, drawy)
+    if currentplayer > 0 then
+        -- draw the cars
+        for i = 1, numofcars do
+            local drawx = racetrack[cars[i].cell].x
+            local drawy = racetrack[cars[i].cell].y
 
-            love.graphics.setColor(1,1,1,1)     -- white
-            if racetrack[cars[1].cell].isCorner then
-                --! make the move left counter change colours here
-                if cars[1].brakestaken >= racetrack[cars[1].cell].speedCheck then
-                    love.graphics.setColor(0,1,0,1)
-                else
-                    love.graphics.setColor(1,1,0,1)
-                end
+            if cars[i].isEliminated then
+                -- don't draw the car
             else
                 love.graphics.setColor(1,1,1,1)     -- white
-            end
-
-            love.graphics.setFont(FONT[enum.fontCorporate])
-            love.graphics.print(cars[1].movesleft, drawx + 20, drawy - 5)
-            love.graphics.setFont(FONT[enum.fontDefault])
-        end
-    end
-
-    -- draw the ghost, if there is one
-    if currentplayer == 1 and cars[1].isOffGrid then
-        if ghost ~= nil then        -- will be nil if no ghost.dat file exists
-            if ghost[numberofturns + 1] ~= nil then
-                local ghostcell = ghost[numberofturns + 1]
-
-                local drawx = racetrack[ghostcell].x
-                local drawy = racetrack[ghostcell].y
-                love.graphics.setColor(1,1,1,0.5)
-                love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[ghostcell].rotation , 1, 1, 32, 15)
+                local rotation = racetrack[cars[i].cell].rotation
+                if cars[i].isSpun then      -- draw car backwards
+                    rotation = rotation + math.pi   -- pi = half a circle (in radians)
+                    if rotation > 2 * math.pi then
+                        rotation = rotation - (2 * math.pi)
+                    end
+                end
+                love.graphics.draw(CARIMAGE[i], drawx, drawy, rotation , 1, 1, 32, 15)
             end
         end
-    end
 
-    -- draw any track knowledge known to the bots
-    if love.keyboard.isDown("k") then
-        drawKnowledge()
+        -- draw number of moves left beside the mouse
+        if currentplayer == 1 then
+            if cars[1].movesleft > 0 then
+                drawx, drawy = love.mouse.getPosition()
+                drawx, drawy = cam:toWorld(drawx, drawy)
+
+                love.graphics.setColor(1,1,1,1)     -- white
+                if racetrack[cars[1].cell].isCorner then
+                    --! make the move left counter change colours here
+                    if cars[1].brakestaken >= racetrack[cars[1].cell].speedCheck then
+                        love.graphics.setColor(0,1,0,1)
+                    else
+                        love.graphics.setColor(1,1,0,1)
+                    end
+                else
+                    love.graphics.setColor(1,1,1,1)     -- white
+                end
+
+                love.graphics.setFont(FONT[enum.fontCorporate])
+                love.graphics.print(cars[1].movesleft, drawx + 20, drawy - 5)
+                love.graphics.setFont(FONT[enum.fontDefault])
+            end
+        end
+
+        -- draw the ghost, if there is one
+        if currentplayer == 1 and cars[1].isOffGrid then
+            if ghost ~= nil then        -- will be nil if no ghost.dat file exists
+                if ghost[numberofturns + 1] ~= nil then
+                    local ghostcell = ghost[numberofturns + 1]
+
+                    local drawx = racetrack[ghostcell].x
+                    local drawy = racetrack[ghostcell].y
+                    love.graphics.setColor(1,1,1,0.5)
+                    love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[ghostcell].rotation , 1, 1, 32, 15)
+                end
+            end
+        end
+
+        -- draw any track knowledge known to the bots
+        if love.keyboard.isDown("k") then       --! this seems to be duplicated code
+            drawKnowledge()
+        end
     end
 
     -- draw any mouse line things
@@ -1500,7 +1466,9 @@ function race.draw()
     lovelyToasts.draw()     -- should this be before detach?
 
     -- draw the sidebar
-    drawSidebar()
+    if currentplayer > 0 then
+        drawSidebar()
+    end
 
 
     -- draw the gear stick on top of the sidebarwidth
@@ -1508,9 +1476,11 @@ function race.draw()
         drawGearStick(cars[1].gear)
     end
 
-    if not EDIT_MODE then
-        -- draw the topbar (gearbox matrix)
-        drawGearboxMatrix()
+    if currentplayer > 0 then
+        if not EDIT_MODE then
+            -- draw the topbar (gearbox matrix)
+            drawGearboxMatrix()
+        end
     end
 
     -- edit mode
