@@ -291,133 +291,52 @@ local function findClearPath(stack, fromcell, movesleft)
     -- return stack
 end
 
-local function getBestPath2(rootcell, movesneeded, path, allpaths)
+local function getAllPaths(rootcell, movesneeded, path, allpaths)
     assert(movesneeded > 0)
 
-    print("***************")
-    print("About to start the pairs. This is root and path:")
-    print(rootcell)
-    print(inspect(path))
-    print(inspect(allpaths))
+    -- print("***************")
+    -- print("About to start the pairs. This is root and path:")
+    -- print(rootcell)
+    -- print(inspect(path))
+    -- print(inspect(allpaths))
 
     for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
-        print("Exploring next PAIRS for rootcell #" .. rootcell .. ". Adding " .. linkedcellnumber .. " to the path")
+        -- print("Exploring next PAIRS for rootcell #" .. rootcell .. ". Adding " .. linkedcellnumber .. " to the path")
         table.insert(path, linkedcellnumber)
-        print("This is path and allpaths:")
-        print(inspect(path))
-        print(inspect(allpaths))
+        -- print("This is path and allpaths:")
+        -- print(inspect(path))
+        -- print(inspect(allpaths))
         -- if movesneeded == 1 then -- this means movesneeded == 0
         if #path >= movesneeded then
             -- add this exhausted path to allpaths
-            print("Path is exhausted. Adding this path to allpaths")
-            print(inspect(path))
-
+            -- print("Path is exhausted. Adding this path to allpaths")
+            -- print(inspect(path))
 
             local temptable = cf.deepcopy(path)
             table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
 
             table.insert(allpaths, temptable)
 
-            print(inspect(allpaths))
+            -- print(inspect(allpaths))
 
         else
-            --!
             -- path is too short. Need to keep exploring
-            print("Path too short")
-            print("This is path:")
-            print(inspect(path))
-
-            print("This is allpaths before going recursive:")
-            print(inspect(allpaths))
-
-            print("Going recursive with " .. path[#path], movesneeded - 1 )
-            local allpaths = getBestPath2(path[#path], movesneeded - 1, path, allpaths)
+            -- print("Path too short")
+            -- print("This is path:")
+            -- print(inspect(path))
+            --
+            -- print("This is allpaths before going recursive:")
+            -- print(inspect(allpaths))
+            --
+            -- print("Going recursive with " .. path[#path], movesneeded)
+            local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
 
         end
     end
 
     table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-    print("Returning")
+    -- print("Returning")
     return(allpaths)
-
-end
-
-local function getBestPath(rootcell, movesneeded, path, breadcrumbs, allpaths)
-
-
-    assert(movesneeded > 0)
-
-    print("Starting pairs for :")
-    print(rootcell)
-    for linkedcellnumber, link in pairs(racetrack[rootcell].link) do        --
-        if link == true then            -- some links might be false
-            if breadcrumbs[linkedcellnumber] == nil then
-                -- no breadcrumbs. Explore forward
-                print("Exploring cell #" .. linkedcellnumber)
-                -- breadcrumbs[linkedcellnumber] = true
-                --! check if oilslick
-                if isCellClear(linkedcellnumber) then
-                    -- add this cell to the path
-                    print("Adding cell #" .. linkedcellnumber .. " to the current path")
-                    table.insert(path, linkedcellnumber)
-                    print("The path is now " .. inspect(path))
-                end
-                movesneeded = movesneeded - 1
-                if movesneeded < 1 or not isCellClear(linkedcellnumber) then
-                    -- the moves are exhausted or the path is blocked. Either way, store and terminate this path
-                    table.insert(allpaths, path)
-                    print("Path exhuasted. Adding this path to the collection:")
-                    print(inspect(path))
-
-                    print("This is allpaths so far:")
-                    print(inspect(allpaths))
-
-                    -- now see if there is an option to backtrack
-                    if #path > 1 then
-                        -- -- move back one cell by getting the 2nd last cell in the path
-                        -- local nextcell = path[#path -1]
-                        -- -- also need to construct a new path without the last cell
-                        -- local newpath = cf.deepcopy(path)
-                        -- table.remove(newpath)
-                        -- print("Looking for new path starting from cell #" .. nextcell)
-                        -- getBestPath(nextcell, movesneeded + 1, newpath, breadcrumbs, allpaths)      -- we stepped back one cell so need to go forward one cell
-                        print("Returning allpaths alpha")
-                        return(allpaths)
-                    else
-                        -- this is the root. Can't move back further
-                        error()
-                        print("Returning allpaths")
-                        return(allpaths)
-                    end
-                else
-                    -- things are going well. Continue the search
-                    print("Continuing search into cell #" .. linkedcellnumber)
-                    getBestPath(linkedcellnumber, movesneeded, path, breadcrumbs, allpaths)
-                end
-            end
-        end
-
-        -- pop two cells off path
-        table.remove(path)
-        table.remove(path)
-        print("Finished processing this link")
-        print("This is the new path:")
-        print(inspect(path))
-    end
-
-    -- this branch has no exhausted all the leaves. Move back towards the root
-    print("Branch is exhausted")
-    -- print("Branch is exhausted. This is path:")
-    -- print(inspect(path))
-
-    print("This is allpaths so far:")
-    print(inspect(allpaths))
-
-    table.remove(path)
-    getBestPath(path[#path],movesneeded + 1, path, breadcrumbs, allpaths)
-
-    error()
-
 
 end
 
@@ -463,10 +382,9 @@ local function loadRaceTrack()
         print("Track knowledge loaded.")
     end
 
-    local allpaths = getBestPath2(203, 2, {}, {}, {}, {})
-    print("Results of allpath:")
-    print(inspect(allpaths))
-
+    -- local allpaths = getAllPaths(203, 5, {}, {})
+    -- print("Results of allpath:")
+    -- print(inspect(allpaths))
 end
 
 local function loadCars()
