@@ -292,52 +292,28 @@ local function findClearPath(stack, fromcell, movesleft)
 end
 
 local function getAllPaths(rootcell, movesneeded, path, allpaths)
+    -- this took about 6 hours to write. Don't ask me how it works
     assert(movesneeded > 0)
 
-    -- print("***************")
-    -- print("About to start the pairs. This is root and path:")
     -- print(rootcell)
-    -- print(inspect(path))
-    -- print(inspect(allpaths))
+    -- print(movesneeded)
+    -- print(path)
+    -- print(allpaths)
 
     for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
-        -- print("Exploring next PAIRS for rootcell #" .. rootcell .. ". Adding " .. linkedcellnumber .. " to the path")
-        table.insert(path, linkedcellnumber)
-        -- print("This is path and allpaths:")
-        -- print(inspect(path))
-        -- print(inspect(allpaths))
-        -- if movesneeded == 1 then -- this means movesneeded == 0
-        if #path >= movesneeded then
-            -- add this exhausted path to allpaths
-            -- print("Path is exhausted. Adding this path to allpaths")
-            -- print(inspect(path))
-
-            local temptable = cf.deepcopy(path)
-            table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-
-            table.insert(allpaths, temptable)
-
-            -- print(inspect(allpaths))
-
-        else
-            -- path is too short. Need to keep exploring
-            -- print("Path too short")
-            -- print("This is path:")
-            -- print(inspect(path))
-            --
-            -- print("This is allpaths before going recursive:")
-            -- print(inspect(allpaths))
-            --
-            -- print("Going recursive with " .. path[#path], movesneeded)
-            local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
-
+        if link == true then
+            table.insert(path, linkedcellnumber)
+            if #path >= movesneeded then
+                local temptable = cf.deepcopy(path)
+                table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
+                table.insert(allpaths, temptable)
+            else
+                local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
+            end
         end
     end
-
     table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-    -- print("Returning")
     return(allpaths)
-
 end
 
 local function removeLinksToCell(cell)
@@ -745,12 +721,30 @@ local function botSelectGear(botnumber)
     return result
 end
 
+local function returnBestPath(carindex)
+
+    local startcell = cars[carindex].cell
+    local movesleft = cars[carindex].movesleft
+
+    local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
+
+    -- print("This is the first path:")
+    -- print(inspect(allpaths[1]))
+
+    return allpaths[1]
+
+
+end
+
 local function applyMoves(carindex)
 
     local path = {}
-    path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
+    -- path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
+    path = returnBestPath(carindex)
     -- print("Found a path:")
     -- print(inspect(path))
+
+
 
     -- path can be nil if the car gets blocked
     if #path == 0 then
