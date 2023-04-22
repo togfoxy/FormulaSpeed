@@ -283,9 +283,11 @@ local function findClearPath(stack, fromcell, movesleft)
             end
         end
     end
-    print("I think car is blocked and all links exhausted. Maybe?")     --!
+    print("Car is blocked")     --! needs to do proper stack reversal
+    print(inspect(stack))
     stepsneeded = 0
-    return {}       -- a signal that a path could not be found
+
+    return {}       -- a signal that a path could not be found      --! need to return the number of moves not spent
     -- return stack
 end
 
@@ -489,7 +491,7 @@ local function addCarMoves(carindex)
             cars[carindex].log[currentcell] = {}
         end
         cars[carindex].log[currentcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
-        print("Adding dice roll " .. diceroll .. " to cell #" .. currentcell)
+        -- print("Adding dice roll " .. diceroll .. " to car log for cell #" .. currentcell)
     end
 end
 
@@ -857,6 +859,10 @@ local function drawSidebar()
     love.graphics.print("Gearbox wear points: " .. cars[currentplayer].wpgearbox, drawx, drawy)
     drawy = drawy + 35
     love.graphics.print("Engine wear points: " .. cars[currentplayer].wpengine, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Handling wear points: " .. cars[currentplayer].wphandling, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Body wear points: " .. cars[currentplayer].wpbody, drawx, drawy)
     drawy = drawy + 35
 end
 
