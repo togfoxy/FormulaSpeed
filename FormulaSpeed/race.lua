@@ -815,7 +815,7 @@ local function drawGearboxMatrix()
     end
 end
 
-function drawKnowledge()
+local function drawKnowledge()
     -- called from race.draw to display bot track knowledge
     for k, v in pairs(racetrack) do
         if trackknowledge ~= nil and trackknowledge[k] ~= nil then
@@ -827,6 +827,37 @@ function drawKnowledge()
 
         end
     end
+end
+
+local function drawSidebar()
+    local drawx = SCREEN_WIDTH - sidebarwidth
+    love.graphics.setColor(0, 0, 0, 0.75)
+    love.graphics.rectangle("fill", drawx, 0, sidebarwidth, SCREEN_HEIGHT)
+
+    drawx = drawx + 10
+    drawy = 75
+
+    love.graphics.setColor(1,1,1,1)
+
+    love.graphics.print("Turns: " .. numberofturns, drawx, drawy)
+    drawy = drawy + 35
+
+    love.graphics.print("Player #" .. currentplayer, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Gear: " .. cars[currentplayer].gear, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Moves left: " .. cars[currentplayer].movesleft, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Stops in corner: " .. cars[currentplayer].brakestaken, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Tyre wear points: " .. cars[currentplayer].wptyres, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Brake wear points: " .. cars[currentplayer].wpbrakes, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Gearbox wear points: " .. cars[currentplayer].wpgearbox, drawx, drawy)
+    drawy = drawy + 35
+    love.graphics.print("Engine wear points: " .. cars[currentplayer].wpengine, drawx, drawy)
+    drawy = drawy + 35
 end
 
 function race.keypressed( key, scancode, isrepeat )
@@ -1133,19 +1164,52 @@ function race.draw()
 
     cam:attach()
 
-    -- draw the track background first
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
+    if love.keyboard.isDown("k") then
+        -- draw the track cells
+        for k, v in pairs(racetrack) do -- k is the index and v is the cell
+            if v.x ~= nil then
+                love.graphics.setColor(1, 1, 1, 1)      -- set colour to white and let it be overridden below
+                if trackknowledge ~= nil and trackknowledge[k] ~= nil then
+                    local drawx = racetrack[k].x
+                    local drawy = racetrack[k].y
+                    love.graphics.setColor(1,1,1,1)
+                    love.graphics.print(trackknowledge[k].moves, drawx, drawy)
 
-    -- draw the oil on top of the background
-    for k, v in pairs(oilslick) do
-        if v == true then
-            local drawx = racetrack[k].x
-            local drawy = racetrack[k].y
-            local rotation = racetrack[k].rotation
-            love.graphics.setColor(1,1,1,1)
-            love.graphics.draw(IMAGE[enum.imageOil], drawx, drawy, rotation, 1, 1, 30, 13)
+                    local cellspeed = trackknowledge[k].moves
+                    if cellspeed <= 2 then
+                        love.graphics.setColor(1, 0, 0, 1)
+                    elseif cellspeed <= 5 then
+                        love.graphics.setColor(1, 0.6, 0, 1)
+                    elseif cellspeed <= 9 then
+                        love.graphics.setColor(1, 1, 0, 1)
+                    elseif cellspeed <= 14 then
+                        love.graphics.setColor(0, 0.5, 0, 1)
+                    else
+                        love.graphics.setColor(0, 1, 1, 1)
+                    end
+
+
+                end
+                love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
+            end
         end
+    else
+
+        -- draw the track background first
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
+
+        -- draw the oil on top of the background
+        for k, v in pairs(oilslick) do
+            if v == true then
+                local drawx = racetrack[k].x
+                local drawy = racetrack[k].y
+                local rotation = racetrack[k].rotation
+                love.graphics.setColor(1,1,1,1)
+                love.graphics.draw(IMAGE[enum.imageOil], drawx, drawy, rotation, 1, 1, 30, 13)
+            end
+        end
+
     end
 
     -- draw the cars
@@ -1270,7 +1334,6 @@ function race.draw()
             end
         end
 
-
         if love.mouse.isDown(2) then
             local cell = getSelectedCell()
             if cell ~= nil then
@@ -1292,34 +1355,8 @@ function race.draw()
     lovelyToasts.draw()     -- should this be before detach?
 
     -- draw the sidebar
-    local drawx = SCREEN_WIDTH - sidebarwidth
-    love.graphics.setColor(0, 0, 0, 0.75)
-    love.graphics.rectangle("fill", drawx, 0, sidebarwidth, SCREEN_HEIGHT)
+    drawSidebar()
 
-    drawx = drawx + 10
-    drawy = 75
-
-    love.graphics.setColor(1,1,1,1)
-
-    love.graphics.print("Turns: " .. numberofturns, drawx, drawy)
-    drawy = drawy + 35
-
-    love.graphics.print("Player #" .. currentplayer, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Gear: " .. cars[currentplayer].gear, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Moves left: " .. cars[currentplayer].movesleft, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Stops in corner: " .. cars[currentplayer].brakestaken, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Tyre wear points: " .. cars[currentplayer].wptyres, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Brake wear points: " .. cars[currentplayer].wpbrakes, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Gearbox wear points: " .. cars[currentplayer].wpgearbox, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Engine wear points: " .. cars[currentplayer].wpengine, drawx, drawy)
-    drawy = drawy + 35
 
     -- draw the gear stick on top of the sidebarwidth
     if currentplayer == 1 then
