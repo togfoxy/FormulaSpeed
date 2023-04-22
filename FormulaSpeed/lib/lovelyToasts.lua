@@ -52,7 +52,7 @@ function lovelyToasts.draw()
 	if #_toasts > 0 then
 		local current = _toasts[1]
 
-		if current ~= nil then
+		if current.text ~= nil then
 
 			-- Store current font and color to restore later
 			local r, g, b, a = love.graphics.getColor()

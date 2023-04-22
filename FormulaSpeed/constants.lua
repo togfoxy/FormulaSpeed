@@ -17,6 +17,7 @@ function constants.load()
     AUDIO = {}
     MUSIC_TOGGLE = true     --! will need to build these features later
     SOUND_TOGGLE = true
+    TRAINER_MODE = true
 
     IMAGE = {}
     CARIMAGE = {}

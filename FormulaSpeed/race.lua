@@ -37,10 +37,10 @@ local function eliminateCar(carindex, isSpun, msg)
     table.insert(PODIUM, thiswin)
 
     if msg ~= nil then
-        lovelyToasts.show(txt, 7, "middle", msg)
+        lovelyToasts.show(msg, 7, "middle", msg)
     else
         print("Elimination without a msg!")
-        error()
+        error(43)
     end
 
     -- add an oil slick
@@ -358,9 +358,14 @@ local function loadRaceTrack()
         print("Track knowledge loaded.")
     end
 
-    -- local allpaths = getAllPaths(203, 5, {}, {})
-    -- print("Results of allpath:")
-    -- print(inspect(allpaths))
+    print("Knowledge size = " .. #trackknowledge)
+	local tksum = 0
+	for k, v in pairs(trackknowledge) do
+		tksum = tksum + v.moves
+	end
+	print("Sum of track knowledge is " .. tksum)
+	print("Average speed is " .. cf.round(tksum / #trackknowledge, 1))
+	-- error()
 end
 
 local function loadCars()
@@ -449,6 +454,12 @@ local function loadCars()
 
     -- load the ghost history, if there is one
     ghost = fileops.loadGhost()
+
+    if TRAINER_MODE then
+        cars[1].isEliminated = true
+        currentplayer = 2
+        oilslick = {}
+    end
 end
 
 local function loadGearStick()
@@ -561,6 +572,9 @@ local function executeLegalMove(carindex, desiredcell)
 
         -- add to history if off grid. This tracks which cell the car landed on at the end of each turn
         if cars[carindex].isOffGrid then
+            print(carindex, numberofturns)
+            print(inspect(history[carindex][numberofturns]))
+            print(cars[carindex].cell)
             history[carindex][numberofturns] = cars[carindex].cell
         end
 
@@ -729,6 +743,7 @@ local function returnBestPath(carindex)
 
     local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
 
+    print("A full list of paths is discovered. Proceeding to truncate shortened paths")
     -- print("All available paths:" .. inspect(allpaths))
 
     -- traverse each path. If a block is found then delete that cell and every cell after that block
@@ -776,6 +791,7 @@ local function applyMoves(carindex)
 
     local txt = ""
     local path = {}
+    print("About to find the best path")
     path = returnBestPath(carindex)
 
     print("Path length is " .. #path)
@@ -821,7 +837,7 @@ local function applyMoves(carindex)
             tiresused = 99
         end
         if cars[carindex].wpbrakes >= brakesused and cars[carindex].wptyres >= tiresused then
-            lovelyToasts.show(txt, 7, "middle")
+            lovelyToasts.show(txt, 7, "middle")     --! check if txt is ever nil/empty
         else
             txt = "Car #" .. carindex .. " is blocked and crashes out"
             eliminateCar(carindex, false, txt)           -- carindex, isSpun, msg
