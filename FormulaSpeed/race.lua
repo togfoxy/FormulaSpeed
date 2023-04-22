@@ -37,7 +37,7 @@ local function eliminateCar(carindex, isSpun, msg)
     table.insert(PODIUM, thiswin)
 
     if msg ~= nil then
-        lovelyToasts.show(txt, 10, "middle", msg)
+        lovelyToasts.show(txt, 7, "middle", msg)
     else
         print("Elimination without a msg!")
         error()
@@ -385,22 +385,22 @@ local function loadCars()
             error("Too many cars loaded.", 148)
         end
 
-        -- ** debugging: tight grid to test blocking **
-        if i == 1 then
-            cars[i].cell = 164
-        elseif i == 2 then
-            cars[i].cell = 448
-        elseif i == 3 then
-            cars[i].cell = 435
-        elseif i == 4 then
-            cars[i].cell = 163
-        elseif i == 5 then
-            cars[i].cell = 447
-        elseif i == 6 then
-            cars[i].cell = 434
-        else
-            error("Too many cars loaded.", 148)
-        end
+        -- -- ** debugging: tight grid to test blocking **
+        -- if i == 1 then
+        --     cars[i].cell = 164
+        -- elseif i == 2 then
+        --     cars[i].cell = 448
+        -- elseif i == 3 then
+        --     cars[i].cell = 435
+        -- elseif i == 4 then
+        --     cars[i].cell = 163
+        -- elseif i == 5 then
+        --     cars[i].cell = 447
+        -- elseif i == 6 then
+        --     cars[i].cell = 434
+        -- else
+        --     error("Too many cars loaded.", 148)
+        -- end
 
 
         cars[i].gear = 0
@@ -729,28 +729,27 @@ local function returnBestPath(carindex)
 
     local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
 
-    print("All available paths:" .. inspect(allpaths))
+    -- print("All available paths:" .. inspect(allpaths))
 
     -- traverse each path. If a block is found then delete that cell and every cell after that block
     for i = #allpaths, 1, -1 do
        -- scan this path (i) for a blockage
-       print("Scanning this path for a block: " .. inspect(allpaths[i]))
+       -- print("Scanning this path for a block: " .. inspect(allpaths[i]))
        local blockedcell        -- nil
        for j = 1, #allpaths[i] do
             if not isCellClear(allpaths[i][j]) then
                 -- truncate this table at this point (j)
                 for k = #allpaths[i], j, -1 do
-                    print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
+                    -- print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
                     table.remove(allpaths[i])
-
                 end
-                print("Path is now " .. inspect(allpaths[i]))
+                -- print("Path is now " .. inspect(allpaths[i]))
                 break
             end
         end
     end
 
-    print("Valid paths reduced to: " .. inspect(allpaths))
+    -- print("Valid paths reduced to: " .. inspect(allpaths))
 
     -- cycle through once again and get the longest path. This means brake points won't be needed
     local longestpath
@@ -768,36 +767,68 @@ local function returnBestPath(carindex)
 
     --! if all paths are deleted then all paths are blocked. Need to choose the longest unblocked path
     if longestpathindex == nil then
-        error("No valid paths")
+        return {}
     end
-
     return allpaths[longestpathindex]
 end
 
 local function applyMoves(carindex)
 
+    local txt = ""
     local path = {}
-    -- path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
     path = returnBestPath(carindex)
-    -- print("Found a path:")
-    -- print(inspect(path))
 
-    -- path can be nil if the car gets blocked
-    if #path == 0 then
-        -- path is blocked. Abort turn and move to next player
-        cars[carindex].turns = cars[carindex].turns + 1     -- need to inc this count so that this car is not simply selected again
-        incCurrentPlayer()
-    else
-        -- path not blocked. execute move and move to next player
-        while path ~= nil and #path > 0 do
-            local desiredcell = path[1]
-            executeLegalMove(carindex, desiredcell)
-            if cars[carindex].movesleft < 1 then
-                cars[carindex].turns = cars[carindex].turns + 1
-                incCurrentPlayer()
-            end
-            table.remove(path, 1)
+    print("Path length is " .. #path)
+
+    while path ~= nil and #path > 0 do
+        local desiredcell = path[1]
+        executeLegalMove(carindex, desiredcell)
+        if cars[carindex].movesleft < 1 then
+            cars[carindex].turns = cars[carindex].turns + 1
+            incCurrentPlayer()
         end
+        table.remove(path, 1)
+    end
+    if cars[carindex].movesleft > 0 then
+        -- valid path is exhausted but there are still moves left. Apply brake points
+        local brakesused = 0
+        local tiresused = 0
+        local overspeed = cars[carindex].movesleft
+        if overspeed == 1 then
+            brakesused = 1
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points"
+        elseif overspeed == 2 then
+            brakesused = 2
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points"
+        elseif overspeed == 3 then
+            brakesused = 3
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points"
+        elseif overspeed == 4 then
+            brakesused = 3
+            tiresused = 1
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points and " .. tiresused .. " tire wear points"
+        elseif overspeed == 5 then
+            brakesused = 3
+            tiresused = 2
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points and " .. tiresused .. " tire wear points"
+        elseif overspeed == 6 then
+            brakesused = 3
+            tiresused = 3
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points and " .. tiresused .. " tire wear points"
+        elseif overspeed > 6 then
+            -- crash
+            brakesused = 99
+            tiresused = 99
+        end
+        if cars[carindex].wpbrakes >= brakesused and cars[carindex].wptyres >= tiresused then
+            lovelyToasts.show(txt, 7, "middle")
+        else
+            txt = "Car #" .. carindex .. " is blocked and crashes out"
+            eliminateCar(carindex, false, txt)           -- carindex, isSpun, msg
+        end
+        cars[carindex].movesleft = 0
+        cars[carindex].turns = cars[carindex].turns + 1
+        incCurrentPlayer()
     end
 end
 

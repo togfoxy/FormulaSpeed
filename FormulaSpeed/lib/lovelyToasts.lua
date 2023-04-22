@@ -40,7 +40,7 @@ function lovelyToasts.update(dt)
 			current._alpha = math.max(0, current._alpha - (100 / lovelyToasts.options.animationDuration * dt))
 		end
 		current._yOffset = math.max(0, current._yOffset - (yOffset / lovelyToasts.options.animationDuration * dt))
-		
+
 		-- Remove toast when duration ended
 		if (current._timePassed >= current.duration) then
 			table.remove(_toasts, 1)
@@ -52,35 +52,40 @@ function lovelyToasts.draw()
 	if #_toasts > 0 then
 		local current = _toasts[1]
 
-		-- Store current font and color to restore later
-		local r, g, b, a = love.graphics.getColor()
-		local font = love.graphics.getFont()
+		if current ~= nil then
 
-		local textWidth = lovelyToasts.style.font:getWidth(current.text)
-		local textHeight = lovelyToasts.style.font:getHeight()
-		local textX = (love.graphics.getWidth() / 2) - (textWidth / 2)
-		local textY = lovelyToasts._yForPosition(current.position) - (textHeight / 2) + current._yOffset
+			-- Store current font and color to restore later
+			local r, g, b, a = love.graphics.getColor()
+			local font = love.graphics.getFont()
 
-		-- Draw toast background
-		local bgR, bgG, bgB, bgA = unpack(lovelyToasts.style.backgroundColor)
-		love.graphics.setColor(bgR, bgG, bgB, (bgA or 0.5) * (current._alpha / 100))
-		love.graphics.rectangle("fill", 
-			textX - lovelyToasts.style.paddingLR,
-			textY - lovelyToasts.style.paddingTB,
-			textWidth + (lovelyToasts.style.paddingLR * 2),
-			textHeight + (lovelyToasts.style.paddingTB * 2),
-			10, 10, 1000
-		)
+			local textWidth = lovelyToasts.style.font:getWidth(current.text)
+			local textHeight = lovelyToasts.style.font:getHeight()
+			local textX = (love.graphics.getWidth() / 2) - (textWidth / 2)
+			local textY = lovelyToasts._yForPosition(current.position) - (textHeight / 2) + current._yOffset
 
-		-- Draw toast title
-		local tR, tG, tB, tA = unpack(lovelyToasts.style.textColor)
-		love.graphics.setColor(tR, tG, tB, (tA or 1) * (current._alpha / 100))
-		love.graphics.setFont(lovelyToasts.style.font)
-		love.graphics.print(current.text, textX, textY)
+			-- Draw toast background
+			local bgR, bgG, bgB, bgA = unpack(lovelyToasts.style.backgroundColor)
+			love.graphics.setColor(bgR, bgG, bgB, (bgA or 0.5) * (current._alpha / 100))
+			love.graphics.rectangle("fill",
+				textX - lovelyToasts.style.paddingLR,
+				textY - lovelyToasts.style.paddingTB,
+				textWidth + (lovelyToasts.style.paddingLR * 2),
+				textHeight + (lovelyToasts.style.paddingTB * 2),
+				10, 10, 1000
+			)
 
-		-- Restore color and font
-		love.graphics.setColor(r, g, b, a)
-		love.graphics.setFont(font)
+			-- Draw toast title
+			local tR, tG, tB, tA = unpack(lovelyToasts.style.textColor)
+			love.graphics.setColor(tR, tG, tB, (tA or 1) * (current._alpha / 100))
+			love.graphics.setFont(lovelyToasts.style.font)
+			love.graphics.print(current.text, textX, textY)
+
+			-- Restore color and font
+			love.graphics.setColor(r, g, b, a)
+			love.graphics.setFont(font)
+		else
+			print("lovelyToasts error: text provided is nil. No toast displayed")
+		end
 	end
 end
 
