@@ -1,5 +1,8 @@
 podium = {}
 
+local podiumloaded = false
+local shopitem = {}
+
 function podium.mousereleased(rx, ry, x, y, button)
     -- call from love.mousereleased()
 
@@ -12,11 +15,41 @@ function podium.mousereleased(rx, ry, x, y, button)
     end
 end
 
-function podium.draw()
+local function drawShopItems()
 
-    table.sort(PODIUM, function(k1, k2)
-        return k1.turns < k2.turns
-    end)
+    local drawx = 1050
+    local drawy = 250
+
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.print("Gear #", drawx, drawy)
+    drawx = drawx + 57
+    love.graphics.print("Low", drawx, drawy)
+    drawx = drawx + 50
+    love.graphics.print("High", drawx, drawy)
+    drawx = drawx + 50
+
+    drawx = 1000
+    drawy = 275
+
+    for shopindex, gearitem in pairs(shopitem) do
+       love.graphics.setColor(1,1,1,1)
+
+       love.graphics.print("For sale: ", drawx, drawy)
+       drawx = drawx + 65
+       love.graphics.print(gearitem.gear, drawx, drawy)
+       drawx = drawx + 50
+       love.graphics.print(gearitem.lowestspeed, drawx, drawy)
+       drawx = drawx + 50
+       love.graphics.print(gearitem.highestspeed, drawx, drawy)
+       drawx = drawx + 50
+
+       drawx = 1000
+       drawy = drawy + 50
+
+    end
+end
+
+function podium.draw()
 
     local drawx = 100
     local drawy = 100
@@ -38,10 +71,56 @@ function podium.draw()
         drawy = drawy + 35
     end
 
+    drawShopItems()
+
     buttons.drawButtons()
 end
 
 function podium.update()
+
+    if not podiumloaded then
+        podiumloaded = true
+        table.sort(PODIUM, function(k1, k2)
+            return k1.turns < k2.turns
+        end)
+
+        -- determine which gears are on sale
+        shopitem[1] = {}
+        shopitem[1].gear = love.math.random(1,6)
+        shopitem[2] = {}
+        shopitem[2].gear = love.math.random(1,6)
+        table.sort(shopitem, function(k1, k2)
+            if k1.gear < k2.gear then
+                return true
+            else
+                return false
+            end
+        end)
+
+
+        -- random gear configuration
+        for shopindex, gearitem in pairs(shopitem) do
+            if gearitem.gear == 1 then
+                gearitem.lowestspeed = 1
+                gearitem.highestspeed = love.math.random(1, 3)
+            elseif gearitem.gear == 2 then
+                gearitem.lowestspeed = love.math.random(1, 3)
+                gearitem.highestspeed = love.math.random(gearitem.lowestspeed, 5)       -- noting we don't want high to be lower than low
+            elseif gearitem.gear == 3 then
+                gearitem.lowestspeed = love.math.random(3, 5)
+                gearitem.highestspeed = love.math.random(7, 9)
+            elseif gearitem.gear == 4 then
+                gearitem.lowestspeed = love.math.random(6, 8)
+                gearitem.highestspeed = love.math.random(11, 13)
+            elseif gearitem.gear == 5 then
+                gearitem.lowestspeed = love.math.random(10, 12)
+                gearitem.highestspeed = love.math.random(19, 21)
+            elseif gearitem.gear == 6 then
+                gearitem.lowestspeed = love.math.random(20, 22)
+                gearitem.highestspeed = love.math.random(29, 31)
+            end
+        end
+    end
 
     if TRAINER_MODE then
         cf.swapScreen(enum.sceneRace, SCREEN_STACK)

@@ -111,6 +111,7 @@ function love.load()
 
 	-- cf.AddScreen(enum.sceneMainMenu, SCREEN_STACK)
     cf.addScreen(enum.sceneRace, SCREEN_STACK)
+	cf.addScreen(enum.scenePodium, SCREEN_STACK)
 
 	love.keyboard.setKeyRepeat(true)
 

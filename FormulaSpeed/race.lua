@@ -334,21 +334,21 @@ local function loadCars()
         end
 
         -- ** debugging: tight grid to test blocking **
-        if i == 1 then
-            cars[i].cell = 164
-        elseif i == 2 then
-            cars[i].cell = 448
-        elseif i == 3 then
-            cars[i].cell = 435
-        elseif i == 4 then
-            cars[i].cell = 163
-        elseif i == 5 then
-            cars[i].cell = 447
-        elseif i == 6 then
-            cars[i].cell = 434
-        else
-            error("Too many cars loaded.", 148)
-        end
+        -- if i == 1 then
+        --     cars[i].cell = 164
+        -- elseif i == 2 then
+        --     cars[i].cell = 448
+        -- elseif i == 3 then
+        --     cars[i].cell = 435
+        -- elseif i == 4 then
+        --     cars[i].cell = 163
+        -- elseif i == 5 then
+        --     cars[i].cell = 447
+        -- elseif i == 6 then
+        --     cars[i].cell = 434
+        -- else
+        --     error("Too many cars loaded.", 148)
+        -- end
 
         cars[i].gear = 0
         cars[i].wptyres = 6
@@ -735,22 +735,22 @@ local function returnBestPath(carindex)
     -- traverse each path. If a block is found then delete that cell and every cell after that block
     for i = #allpaths, 1, -1 do
         -- scan this path (i) for a blockage
-        print("Scanning this path for a block: " .. inspect(allpaths[i]))
+        -- print("Scanning this path for a block: " .. inspect(allpaths[i]))
         local blockedcell        -- nil
         for j = 1, #allpaths[i] do
             if not isCellClear(allpaths[i][j]) then
                 -- truncate this table at this point (j)
                 for k = #allpaths[i], j, -1 do
-                    print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
+                    -- print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
                     table.remove(allpaths[i])
                 end
-                print("Path is now " .. inspect(allpaths[i]))
+                -- print("Path is now " .. inspect(allpaths[i]))
                 break
             end
         end
     end
 
-    print("Valid paths reduced to: " .. inspect(allpaths))
+    -- print("Valid paths reduced to: " .. inspect(allpaths))
 
     -- cycle through once again and get the longest path. This means brake points won't be needed
     local longestpath
@@ -762,7 +762,7 @@ local function returnBestPath(carindex)
                 -- this is the new longest path
                 longestpath = #allpaths[i]
                 longestpathindex = i
-            elseif #allpaths[i] = longestpath then
+            elseif #allpaths[i] == longestpath then
                 -- paths are equal. Add a bit of randomness so different paths are utilised and the track knowledge grows
                 if love.math.random(1,2) == 1 then
                     longestpath = #allpaths[i]
@@ -787,10 +787,10 @@ local function applyMoves(carindex)
 
     local txt = ""
     local path = {}
-    print("About to find the best path")
+    -- print("About to find the best path")
     path = returnBestPath(carindex)             -- returns the single best path
 
-    print("Path length is " .. #path)       --! path length = 0 when it shouldn't be
+    -- print("Path length is " .. #path)       --! path length = 0 when it shouldn't be
 
     while path ~= nil and #path > 0 do
         local desiredcell = path[1]
