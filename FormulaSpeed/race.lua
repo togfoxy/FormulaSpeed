@@ -370,28 +370,54 @@ local function loadCars()
         cars[i].gearbox = {}
         cars[i].gearbox[1] = {}
         cars[i].gearbox[1][1] = 1
-        cars[i].gearbox[1][2] = love.math.random(1, 3)
+        cars[i].gearbox[1][2] = 2
 
         cars[i].gearbox[2] = {}
-        cars[i].gearbox[2][1] = love.math.random(1, 3)
-        cars[i].gearbox[2][2] = love.math.random(1, 5)
-        if cars[i].gearbox[2][2] < cars[i].gearbox[2][1] then cars[i].gearbox[2][2] = cars[i].gearbox[2][1] end
+        cars[i].gearbox[2][1] = 2
+        cars[i].gearbox[2][2] = 4
 
         cars[i].gearbox[3] = {}
-        cars[i].gearbox[3][1] = love.math.random(3, 5)
-        cars[i].gearbox[3][2] = love.math.random(7, 9)
+        cars[i].gearbox[3][1] = 4
+        cars[i].gearbox[3][2] = 8
 
         cars[i].gearbox[4] = {}
-        cars[i].gearbox[4][1] = love.math.random(6, 8)
-        cars[i].gearbox[4][2] = love.math.random(11, 13)
+        cars[i].gearbox[4][1] = 7
+        cars[i].gearbox[4][2] = 12
 
         cars[i].gearbox[5] = {}
-        cars[i].gearbox[5][1] = love.math.random(10, 12)
-        cars[i].gearbox[5][2] = love.math.random(19, 21)
+        cars[i].gearbox[5][1] = 11
+        cars[i].gearbox[5][2] = 20
 
         cars[i].gearbox[6] = {}
-        cars[i].gearbox[6][1] = love.math.random(20, 22)
-        cars[i].gearbox[6][2] = love.math.random(29, 31)
+        cars[i].gearbox[6][1] = 21
+        cars[i].gearbox[6][2] = 30
+
+        -- random gearbox
+        -- cars[i].gearbox = {}
+        -- cars[i].gearbox[1] = {}
+        -- cars[i].gearbox[1][1] = 1
+        -- cars[i].gearbox[1][2] = love.math.random(1, 3)
+        --
+        -- cars[i].gearbox[2] = {}
+        -- cars[i].gearbox[2][1] = love.math.random(1, 3)
+        -- cars[i].gearbox[2][2] = love.math.random(1, 5)
+        -- if cars[i].gearbox[2][2] < cars[i].gearbox[2][1] then cars[i].gearbox[2][2] = cars[i].gearbox[2][1] end
+        --
+        -- cars[i].gearbox[3] = {}
+        -- cars[i].gearbox[3][1] = love.math.random(3, 5)
+        -- cars[i].gearbox[3][2] = love.math.random(7, 9)
+        --
+        -- cars[i].gearbox[4] = {}
+        -- cars[i].gearbox[4][1] = love.math.random(6, 8)
+        -- cars[i].gearbox[4][2] = love.math.random(11, 13)
+        --
+        -- cars[i].gearbox[5] = {}
+        -- cars[i].gearbox[5][1] = love.math.random(10, 12)
+        -- cars[i].gearbox[5][2] = love.math.random(19, 21)
+        --
+        -- cars[i].gearbox[6] = {}
+        -- cars[i].gearbox[6][1] = love.math.random(20, 22)
+        -- cars[i].gearbox[6][2] = love.math.random(29, 31)
     end
 
     -- load the ghost history, if there is one
