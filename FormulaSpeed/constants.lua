@@ -19,7 +19,7 @@ function constants.load()
     SOUND_TOGGLE = true
 
     TRAINER_MODE = false
-    TRAINER_MODE = true
+    -- TRAINER_MODE = true
 
     IMAGE = {}
     CARIMAGE = {}

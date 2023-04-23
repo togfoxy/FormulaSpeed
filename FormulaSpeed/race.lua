@@ -333,7 +333,7 @@ local function loadCars()
             error("Too many cars loaded.", 148)
         end
 
-        -- -- ** debugging: tight grid to test blocking **
+        -- ** debugging: tight grid to test blocking **
         -- if i == 1 then
         --     cars[i].cell = 164
         -- elseif i == 2 then
@@ -349,7 +349,6 @@ local function loadCars()
         -- else
         --     error("Too many cars loaded.", 148)
         -- end
-
 
         cars[i].gear = 0
         cars[i].wptyres = 6
@@ -687,7 +686,9 @@ local function getAllPaths(rootcell, movesneeded, path, allpaths)
                 local temptable = cf.deepcopy(path)
                 table.insert(allpaths, temptable)
                 table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-                return(allpaths)        --!
+                if #allpaths >= 5 then
+                    return(allpaths)        --!
+                end
             else
                 local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
             end
@@ -824,7 +825,7 @@ local function applyBrake(carindex)
             cars[carindex].movesleft = cars[carindex].movesleft - 1
             cars[carindex].wpbrakes = cars[carindex].wpbrakes - 1
             local txt = "Car #" .. carindex .. " used 1 brake point"
-            lovelyToasts.show(txt, 10, "middle")
+            lovelyToasts.show(txt, 5, "middle")
 
             if cars[1].movesleft < 1 then
                 cars[1].movesleft = 0
@@ -833,7 +834,20 @@ local function applyBrake(carindex)
             end
         else
             if carindex == 1 then
-                lovelyToasts.show("No brake points available!", 10, "middle")
+                lovelyToasts.show("No brake points available!", 5, "middle")
+            end
+            -- check if car needs to crash out
+            local isblocked = true
+            local currentcell = cars[1].cell
+            for k, v in pairs(racetrack[currentcell].link) do
+                if isCellClear(k) then
+                    isblocked = false
+                end
+            end
+            if isblocked and cars[1].wpbrakes <= 1 then
+                local txt = "You car is blocked and you have no brakes. You are eliminated."
+                eliminateCar(1, false, txt)           -- carindex, isSpun, msg
+                incCurrentPlayer()
             end
         end
     else
@@ -1143,11 +1157,11 @@ function race.mousereleased(rx, ry, x, y, button)
                 -- try to move the car to the selected cell if linked
                 if not cars[1].isEliminated then
                     if cars[1].movesleft > 0 then
-                        local currentcell = cars[1].cell
+                        local originalcell = cars[1].cell
                         local desiredcell = getSelectedCell()
 
                         if desiredcell ~= nil then
-                            if racetrack[currentcell].link[desiredcell] == true then
+                            if racetrack[originalcell].link[desiredcell] == true then
                                 -- move is legal but is cell blocked?
                                 if isCellClear(desiredcell) then
                                     executeLegalMove(1, desiredcell)
