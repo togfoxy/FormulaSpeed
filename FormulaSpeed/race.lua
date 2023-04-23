@@ -420,6 +420,17 @@ local function loadCars()
         -- cars[i].gearbox[6][2] = love.math.random(29, 31)
     end
 
+    local savedcar = fun.loadTableFromFile("playercar.dat")
+
+    if savedcar == nil then
+        -- do nothing
+        print("No player car found. Using default car.")
+        fun.saveTableToFile("playercar.dat", cars[1])
+    else
+        print("Player car found on file.")
+        cars[1] = savedcar
+    end
+
     -- load the ghost history, if there is one
     ghost = fileops.loadGhost()
 

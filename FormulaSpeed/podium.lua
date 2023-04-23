@@ -97,7 +97,6 @@ function podium.update()
             end
         end)
 
-
         -- random gear configuration
         for shopindex, gearitem in pairs(shopitem) do
             if gearitem.gear == 1 then

@@ -26,8 +26,15 @@ function constants.load()
     FONT = {}
     PODIUM = {}               -- where/if the car finished including number of turns
 
-
     cam = nil       -- camera
+
+    -- set the folders based on fused or not fused
+    savedir = love.filesystem.getSourceBaseDirectory()
+    if love.filesystem.isFused() then
+        savedir = savedir .. "\\savedata\\"
+    else
+        savedir = savedir .. "/FormulaSpeed/savedata/"
+    end
 
     enums.load()
 
