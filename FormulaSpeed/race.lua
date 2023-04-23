@@ -23,7 +23,7 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
-local PathThreshold = 40                -- used by 'getPaths' to tune the algorithm workload
+local PathThreshold = 50                -- used by 'getPaths' to tune the algorithm workload
 
 local function eliminateCar(carindex, isSpun, msg)
     -- it has been determined this car needs to be eliminated
@@ -380,6 +380,9 @@ local function loadCars()
         carLoaded = true
     end
 
+    print(inspect(car))
+
+
     for i = 1, numofcars do
         cars[i] = {}
         history[i] = {}         -- tracks the history for this race only
@@ -434,6 +437,13 @@ local function loadCars()
             cars[1].wpbody = car.wpbodymax
             cars[1].wpengine = car.wpenginemax
             cars[1].wphandling = car.wphandlingmax
+
+            cars[1].wptyresmax = car.wptyresmax
+            cars[1].wpbrakesmax = car.wpbrakesmax
+            cars[1].wpgearboxmax = car.wpgearboxmax
+            cars[1].wpbodymax = car.wpbodymax
+            cars[1].wpenginemax = car.wpenginemax
+            cars[1].wphandlingmax = car.wphandlingmax
 
             -- gearbox
             cars[1].gearbox = {}
@@ -1086,7 +1096,7 @@ local function drawKnowledge()
             local drawx = racetrack[k].x
             local drawy = racetrack[k].y
 
-            love.graphics.setColor(0,0,0,1)
+            love.graphics.setColor(1,1,1,1)
             love.graphics.print(trackknowledge[k].moves, drawx, drawy)
 
         end

@@ -2,20 +2,8 @@ podium = {}
 
 local podiumloaded = false
 local shopitem = {}
-
-function podium.mousereleased(rx, ry, x, y, button)
-    -- call from love.mousereleased()
-
-    local clickedButtonID = buttons.getButtonID(rx, ry)
-
-    if clickedButtonID == enum.buttonPodiumExit then
-        love.event.quit()
-    elseif clickedButtonID == enum.buttonPodiumRestart then
-        print("Saving player car to file")
-        fun.saveTableToFile("playercar.dat", PLAYERCAR)
-        cf.swapScreen(enum.sceneRace, SCREEN_STACK)
-    end
-end
+local car = {}
+local career = {}
 
 local function drawShopItems()
 
@@ -51,6 +39,50 @@ local function drawShopItems()
     end
 end
 
+local function drawCareer()
+    local drawx = 400
+    local drawy = 500
+
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.print("Career stats", drawx, drawy)
+    drawy = drawy + 50
+    for i = 1, #career do
+        love.graphics.print(i .. ": " .. career[i], drawx, drawy)
+        drawy = drawy + 50
+    end
+
+end
+
+local function drawCarComponents()
+
+    -- print(inspect(car.gearboxsettings))
+
+    local drawx = 400
+    local drawy = 250
+
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.print("Gearbox configuration:", drawx, drawy)
+    drawy = drawy + 30
+    for i = 1, 6 do         -- six gears
+        love.graphics.print("Gear " .. i .. " : " .. car.gearboxsettings[i][1] .. " - " .. car.gearboxsettings[i][2], drawx, drawy )
+        drawy = drawy + 30
+    end
+end
+
+function podium.mousereleased(rx, ry, x, y, button)
+    -- call from love.mousereleased()
+
+    local clickedButtonID = buttons.getButtonID(rx, ry)
+
+    if clickedButtonID == enum.buttonPodiumExit then
+        love.event.quit()
+    elseif clickedButtonID == enum.buttonPodiumRestart then
+        print("Saving player car to file")
+        fun.saveTableToFile("playercar.dat", PLAYERCAR)
+        cf.swapScreen(enum.sceneRace, SCREEN_STACK)
+    end
+end
+
 function podium.draw()
 
     local drawx = 100
@@ -74,6 +106,8 @@ function podium.draw()
     end
 
     drawShopItems()
+    drawCarComponents()
+    drawCareer()
 
     buttons.drawButtons()
 end
@@ -85,6 +119,32 @@ function podium.update()
         table.sort(PODIUM, function(k1, k2)
             return k1.turns < k2.turns
         end)
+
+        -- load car configuration
+        car = fun.loadTableFromFile("playercar.dat")
+        if car == nil then
+            print("No car found")
+        else
+            print("Car loaded")
+        end
+        assert(car ~= nil)
+
+        -- load career
+        career = fun.loadTableFromFile("career.dat")
+        if career == nil then career = {} end
+
+        -- adjust career
+        for i = 1, #PODIUM do
+            if PODIUM[i].car == 1 then
+                if career[i] == nil then career[i] = 0 end
+                career[i] = career[i] + 1       -- i.e career[1] = 8 means player came first 8 times
+            end
+        end
+        -- write career to file
+        fun.saveTableToFile("career.dat", career)
+
+        print("Career table:")
+        print(inspect(career))
 
         -- determine which gears are on sale
         shopitem[1] = {}
