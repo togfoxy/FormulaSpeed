@@ -334,21 +334,21 @@ local function loadCars()
         end
 
         -- ** debugging: tight grid to test blocking **
-        -- if i == 1 then
-        --     cars[i].cell = 164
-        -- elseif i == 2 then
-        --     cars[i].cell = 448
-        -- elseif i == 3 then
-        --     cars[i].cell = 435
-        -- elseif i == 4 then
-        --     cars[i].cell = 163
-        -- elseif i == 5 then
-        --     cars[i].cell = 447
-        -- elseif i == 6 then
-        --     cars[i].cell = 434
-        -- else
-        --     error("Too many cars loaded.", 148)
-        -- end
+        if i == 1 then
+            cars[i].cell = 164
+        elseif i == 2 then
+            cars[i].cell = 448
+        elseif i == 3 then
+            cars[i].cell = 435
+        elseif i == 4 then
+            cars[i].cell = 163
+        elseif i == 5 then
+            cars[i].cell = 447
+        elseif i == 6 then
+            cars[i].cell = 434
+        else
+            error("Too many cars loaded.", 148)
+        end
 
         cars[i].gear = 0
         cars[i].wptyres = 6
@@ -689,7 +689,6 @@ local function executeLegalMove(carindex, desiredcell)
     else
         pausetimer = 1.0			-- seconds
     end
-
 end
 
 local function botSelectGear(botnumber)
@@ -706,13 +705,13 @@ local function getAllPaths(rootcell, movesneeded, path, allpaths)
     assert(movesneeded > 0)
 
     for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
-        if link == true and isCellClear(linkedcellnumber) then
+        if link == true then
             table.insert(path, linkedcellnumber)
             if #path >= movesneeded then
                 local temptable = cf.deepcopy(path)
                 table.insert(allpaths, temptable)
                 table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-                if #allpaths >= 5 then
+                if #allpaths >= 15 then
                     return(allpaths)        --!
                 end
             else
@@ -731,28 +730,27 @@ local function returnBestPath(carindex)
 
     local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
 
-    print("A full list of paths is discovered. Proceeding to truncate shortened paths")
-    -- print("All available paths:" .. inspect(allpaths))
+    print("Reviewing these paths for blocks: " .. inspect(allpaths))
 
     -- traverse each path. If a block is found then delete that cell and every cell after that block
     for i = #allpaths, 1, -1 do
-       -- scan this path (i) for a blockage
-       -- print("Scanning this path for a block: " .. inspect(allpaths[i]))
-       local blockedcell        -- nil
-       for j = 1, #allpaths[i] do
+        -- scan this path (i) for a blockage
+        print("Scanning this path for a block: " .. inspect(allpaths[i]))
+        local blockedcell        -- nil
+        for j = 1, #allpaths[i] do
             if not isCellClear(allpaths[i][j]) then
                 -- truncate this table at this point (j)
                 for k = #allpaths[i], j, -1 do
-                    -- print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
+                    print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
                     table.remove(allpaths[i])
                 end
-                -- print("Path is now " .. inspect(allpaths[i]))
+                print("Path is now " .. inspect(allpaths[i]))
                 break
             end
         end
     end
 
-    -- print("Valid paths reduced to: " .. inspect(allpaths))
+    print("Valid paths reduced to: " .. inspect(allpaths))
 
     -- cycle through once again and get the longest path. This means brake points won't be needed
     local longestpath
@@ -760,8 +758,17 @@ local function returnBestPath(carindex)
     for i = 1, #allpaths do
         if #allpaths[i] > 0 then
             -- path is not empty
-            if longestpath == nil or #allpaths[i] > longestpath then
+            if longestpath == nil then
                 -- this is the new longest path
+                longestpath = #allpaths[i]
+                longestpathindex = i
+            elseif #allpaths[i] = longestpath then
+                -- paths are equal. Add a bit of randomness so different paths are utilised and the track knowledge grows
+                if love.math.random(1,2) == 1 then
+                    longestpath = #allpaths[i]
+                    longestpathindex = i
+                end
+            elseif #allpaths[i] > longestpath then
                 longestpath = #allpaths[i]
                 longestpathindex = i
             end
@@ -770,6 +777,7 @@ local function returnBestPath(carindex)
 
     --! if all paths are deleted then all paths are blocked. Need to choose the longest unblocked path
     if longestpathindex == nil then
+        print("Returning no paths")
         return {}
     end
     return allpaths[longestpathindex]
@@ -780,24 +788,26 @@ local function applyMoves(carindex)
     local txt = ""
     local path = {}
     print("About to find the best path")
-    path = returnBestPath(carindex)
+    path = returnBestPath(carindex)             -- returns the single best path
 
-    print("Path length is " .. #path)
+    print("Path length is " .. #path)       --! path length = 0 when it shouldn't be
 
     while path ~= nil and #path > 0 do
         local desiredcell = path[1]
         executeLegalMove(carindex, desiredcell)
         if cars[carindex].movesleft < 1 then
             cars[carindex].turns = cars[carindex].turns + 1
-            incCurrentPlayer()
         end
         table.remove(path, 1)
     end
+    -- path is exhausted, but are moves exhausted?
     if cars[carindex].movesleft > 0 then
         -- valid path is exhausted but there are still moves left. Apply brake points
         local brakesused = 0
         local tiresused = 0
         local overspeed = cars[carindex].movesleft
+        cars[carindex].movesleft = 0
+        cars[carindex].turns = cars[carindex].turns + 1
         if overspeed == 1 then
             brakesused = 1
             txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points"
@@ -830,10 +840,8 @@ local function applyMoves(carindex)
             txt = "Car #" .. carindex .. " is blocked and crashes out"
             eliminateCar(carindex, false, txt)           -- carindex, isSpun, msg
         end
-        cars[carindex].movesleft = 0
-        cars[carindex].turns = cars[carindex].turns + 1
-        incCurrentPlayer()
     end
+    incCurrentPlayer()
 end
 
 local function moveBots()
@@ -1150,19 +1158,19 @@ function race.mousereleased(rx, ry, x, y, button)
                         else
                             if cars[1].wpgearbox == 0 then
                                 -- gearbox damaged. Can only shift one gear. Ignore this click
-                                lovelyToasts.show("Gearbox damaged. Can only shift one gear", 10, "middle")
+                                lovelyToasts.show("Gearbox damaged. Can only shift one gear", 5, "middle")
                             else
                                 if gearchange == -2 then -- a rapid shift down. Damage gearbox
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].gear = desiredgear
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox point used", 10, "middle")
+                                    lovelyToasts.show("Gearbox point used", 5, "middle")
                                 elseif gearchange == -3 then -- a rapid shift down. Damage gearbox
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].wpbrakes = cars[1].wpbrakes - 1
                                     cars[1].gear = desiredgear
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox and brake point used", 10, "middle")
+                                    lovelyToasts.show("Gearbox and brake point used", 5, "middle")
                                 elseif gearchange == -4 then -- a rapid shift down. Damage gearbox
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].wpbrakes = cars[1].wpbrakes - 1
@@ -1170,7 +1178,7 @@ function race.mousereleased(rx, ry, x, y, button)
                                     cars[1].gear = desiredgear
                                     oilslick[cars[1].cell] = true
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox, brake and engine point used", 10, "middle")
+                                    lovelyToasts.show("Gearbox, brake and engine point used", 5, "middle")
                                 else
                                     -- illegal shift. Do nothing
                                 end
