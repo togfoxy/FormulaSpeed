@@ -26,6 +26,8 @@ function constants.load()
     FONT = {}
     PODIUM = {}               -- where/if the car finished including number of turns
 
+    PLAYERCAR = {}              -- used to carry data between race and podium scene
+
     cam = nil       -- camera
 
     -- set the folders based on fused or not fused
