@@ -27,7 +27,7 @@ Aim to 'stop' your car on each corner according to the number of times indicated
 
 Failing to stop the required number of times on each corner will result in tyre damage or crash.
 
-Use the BRAKE button to slow your car. This will cost you BRAKE points.
+Use the BRAKE button to slow your car. This will cost you BRAKE points. If you get blocked, keep pressing the brake until your turn ends (or you crash).
 
 Use the matrix at the top of the screen to see how many squares each gear may take you. The actual number will be a random number in the given range.
 
@@ -75,13 +75,17 @@ Contains in-game editor that lets you change the track. Click 'e' to enter edito
 
 - 'SHIFT-S' will save the track
 
+Artificial intelligence - machine learning
+==========================================
+
+The bots are not hand scripted or coded. They are genuine machine-learning bots. They start with limited intelligence and learn over time. The more you play, the more they learn. As the bots learn, their knowledge and understanding of the track increases. 
+
+Hold the 'k' key to see the heatmap for the track as the bots understand it. Red cells show where the bots think they need to slow down. Yellow and blue cells show where the bots think they need to speed up. This heatmap is constantly evolving and improving. With enough time, the bots will form a perfect heatmap to guide their decision making.
 
 Roadmap
 =======
 
 Audio.
-
-Implementation of more rules around braking, wrecks and road handling.
 
 A campaign.
 
