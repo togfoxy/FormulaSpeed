@@ -37,10 +37,10 @@ local function eliminateCar(carindex, isSpun, msg)
     table.insert(PODIUM, thiswin)
 
     if msg ~= nil then
-        lovelyToasts.show(txt, 10, "middle", msg)
+        lovelyToasts.show(msg, 7, "middle", msg)
     else
         print("Elimination without a msg!")
-        error()
+        error(43)
     end
 
     -- add an oil slick
@@ -156,6 +156,9 @@ local function incCurrentPlayer()
     -- if there are no cars in play then prep the next scene
     if #players == 0 then
         cf.swapScreen(enum.scenePodium, SCREEN_STACK)   -- note: doing this doesn't stop the rest of the below code executing
+        print("All cars finished or eliminated")
+        currentplayer = 0
+        -- racetrack = {}
     end
 
     -- custom sort the table of cars that are still in play
@@ -187,8 +190,10 @@ local function incCurrentPlayer()
             table.insert(turntable, cars[i].turns)
         end
     end
-    table.sort(turntable)
-    numberofturns = turntable[1]
+    if #turntable > 0 then      -- this stops numberofturns setting to nil
+        table.sort(turntable)
+        numberofturns = turntable[1]
+    end
 
     if currentplayer == 1 and not cars[1].isEliminated then
         TRANSLATEX = racetrack[cars[1].cell].x
@@ -254,68 +259,6 @@ local function isCellClear(cellindex)
 	return true
 end
 
-local function findClearPath(stack, fromcell, movesleft)
-	-- starting at fromcell, find a path that uses at least movesleft steps)
-    -- eg cell #1 to cell #25
-    -- input: a table that will start empty and be filled
-    -- input: the cell the path starts at
-    -- input: how many cells to look forward (moves left/dice roll)
-    --! how does this behave when blocked and no path?
-
-	-- local stack = {}
-	local currentcell = fromcell
-	local stepsneeded = movesleft
-    -- print("Car at cell#" .. currentcell .. " about to look for a valid link")
-	for k, v in pairs(racetrack[currentcell].link) do
-        if v == true then       -- ensure the link is valid/real
-            local nextrandomcell = k		-- k is the cell number of the link
-    		if isCellClear(nextrandomcell) then
-                table.insert(stack, nextrandomcell)
-    			stepsneeded = stepsneeded - 1
-                if stepsneeded < 1 then
-                    -- job done
-                    return stack
-                else
-                    -- steps not exhausted yet. Keep going
-                    stack = findClearPath(stack, nextrandomcell, stepsneeded)
-                    return stack
-                end
-            end
-        end
-    end
-    print("Car is blocked")     --! needs to do proper stack reversal
-    print(inspect(stack))
-    stepsneeded = 0
-
-    return {}       -- a signal that a path could not be found      --! need to return the number of moves not spent
-    -- return stack
-end
-
-local function getAllPaths(rootcell, movesneeded, path, allpaths)
-    -- this took about 6 hours to write. Don't ask me how it works
-    assert(movesneeded > 0)
-
-    -- print(rootcell)
-    -- print(movesneeded)
-    -- print(path)
-    -- print(allpaths)
-
-    for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
-        if link == true then
-            table.insert(path, linkedcellnumber)
-            if #path >= movesneeded then
-                local temptable = cf.deepcopy(path)
-                table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-                table.insert(allpaths, temptable)
-            else
-                local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
-            end
-        end
-    end
-    table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-    return(allpaths)
-end
-
 local function removeLinksToCell(cell)
     -- scan racetrack and remove all links to cell making it orphaned and ready for deletion
     -- for i = 1, #racetrack do
@@ -358,9 +301,14 @@ local function loadRaceTrack()
         print("Track knowledge loaded.")
     end
 
-    -- local allpaths = getAllPaths(203, 5, {}, {})
-    -- print("Results of allpath:")
-    -- print(inspect(allpaths))
+    print("Knowledge size = " .. #trackknowledge)
+	local tksum = 0
+	for k, v in pairs(trackknowledge) do
+		tksum = tksum + v.moves
+	end
+	print("Sum of track knowledge is " .. tksum)
+	print("Average speed is " .. cf.round(tksum / #trackknowledge, 1))
+	-- error()
 end
 
 local function loadCars()
@@ -386,22 +334,21 @@ local function loadCars()
         end
 
         -- ** debugging: tight grid to test blocking **
-        if i == 1 then
-            cars[i].cell = 164
-        elseif i == 2 then
-            cars[i].cell = 448
-        elseif i == 3 then
-            cars[i].cell = 435
-        elseif i == 4 then
-            cars[i].cell = 163
-        elseif i == 5 then
-            cars[i].cell = 447
-        elseif i == 6 then
-            cars[i].cell = 434
-        else
-            error("Too many cars loaded.", 148)
-        end
-
+        -- if i == 1 then
+        --     cars[i].cell = 164
+        -- elseif i == 2 then
+        --     cars[i].cell = 448
+        -- elseif i == 3 then
+        --     cars[i].cell = 435
+        -- elseif i == 4 then
+        --     cars[i].cell = 163
+        -- elseif i == 5 then
+        --     cars[i].cell = 447
+        -- elseif i == 6 then
+        --     cars[i].cell = 434
+        -- else
+        --     error("Too many cars loaded.", 148)
+        -- end
 
         cars[i].gear = 0
         cars[i].wptyres = 6
@@ -449,6 +396,12 @@ local function loadCars()
 
     -- load the ghost history, if there is one
     ghost = fileops.loadGhost()
+
+    if TRAINER_MODE then
+        cars[1].isEliminated = true
+        currentplayer = 2
+        oilslick = {}
+    end
 end
 
 local function loadGearStick()
@@ -534,7 +487,7 @@ local function executeLegalMove(carindex, desiredcell)
     cars[carindex].isSpun = false       -- the act of moving causes unspin
 
     -- check if car is moving off grid
-    if racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then
+    if racetrack[originalcell].isFinish ~= nil and racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then
         -- car was on the finish but moved off it. It is now 'off grid'
         cars[carindex].isOffGrid = true
     end
@@ -722,6 +675,29 @@ local function botSelectGear(botnumber)
     return result
 end
 
+local function getAllPaths(rootcell, movesneeded, path, allpaths)
+    -- this took about 6 hours to write. Don't ask me how it works
+    assert(movesneeded > 0)
+
+    for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
+        if link == true and isCellClear(linkedcellnumber) then
+            table.insert(path, linkedcellnumber)
+            if #path >= movesneeded then
+                local temptable = cf.deepcopy(path)
+                table.insert(allpaths, temptable)
+                table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
+                if #allpaths >= 5 then
+                    return(allpaths)        --!
+                end
+            else
+                local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
+            end
+        end
+    end
+    table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
+    return(allpaths)
+end
+
 local function returnBestPath(carindex)
 
     local startcell = cars[carindex].cell
@@ -729,28 +705,28 @@ local function returnBestPath(carindex)
 
     local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
 
-    print("All available paths:" .. inspect(allpaths))
+    print("A full list of paths is discovered. Proceeding to truncate shortened paths")
+    -- print("All available paths:" .. inspect(allpaths))
 
     -- traverse each path. If a block is found then delete that cell and every cell after that block
     for i = #allpaths, 1, -1 do
        -- scan this path (i) for a blockage
-       print("Scanning this path for a block: " .. inspect(allpaths[i]))
+       -- print("Scanning this path for a block: " .. inspect(allpaths[i]))
        local blockedcell        -- nil
        for j = 1, #allpaths[i] do
             if not isCellClear(allpaths[i][j]) then
                 -- truncate this table at this point (j)
                 for k = #allpaths[i], j, -1 do
-                    print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
+                    -- print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
                     table.remove(allpaths[i])
-
                 end
-                print("Path is now " .. inspect(allpaths[i]))
+                -- print("Path is now " .. inspect(allpaths[i]))
                 break
             end
         end
     end
 
-    print("Valid paths reduced to: " .. inspect(allpaths))
+    -- print("Valid paths reduced to: " .. inspect(allpaths))
 
     -- cycle through once again and get the longest path. This means brake points won't be needed
     local longestpath
@@ -768,36 +744,69 @@ local function returnBestPath(carindex)
 
     --! if all paths are deleted then all paths are blocked. Need to choose the longest unblocked path
     if longestpathindex == nil then
-        error("No valid paths")
+        return {}
     end
-
     return allpaths[longestpathindex]
 end
 
 local function applyMoves(carindex)
 
+    local txt = ""
     local path = {}
-    -- path = findClearPath(path, cars[carindex].cell, cars[carindex].movesleft)
+    print("About to find the best path")
     path = returnBestPath(carindex)
-    -- print("Found a path:")
-    -- print(inspect(path))
 
-    -- path can be nil if the car gets blocked
-    if #path == 0 then
-        -- path is blocked. Abort turn and move to next player
-        cars[carindex].turns = cars[carindex].turns + 1     -- need to inc this count so that this car is not simply selected again
-        incCurrentPlayer()
-    else
-        -- path not blocked. execute move and move to next player
-        while path ~= nil and #path > 0 do
-            local desiredcell = path[1]
-            executeLegalMove(carindex, desiredcell)
-            if cars[carindex].movesleft < 1 then
-                cars[carindex].turns = cars[carindex].turns + 1
-                incCurrentPlayer()
-            end
-            table.remove(path, 1)
+    print("Path length is " .. #path)
+
+    while path ~= nil and #path > 0 do
+        local desiredcell = path[1]
+        executeLegalMove(carindex, desiredcell)
+        if cars[carindex].movesleft < 1 then
+            cars[carindex].turns = cars[carindex].turns + 1
+            incCurrentPlayer()
         end
+        table.remove(path, 1)
+    end
+    if cars[carindex].movesleft > 0 then
+        -- valid path is exhausted but there are still moves left. Apply brake points
+        local brakesused = 0
+        local tiresused = 0
+        local overspeed = cars[carindex].movesleft
+        if overspeed == 1 then
+            brakesused = 1
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points"
+        elseif overspeed == 2 then
+            brakesused = 2
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points"
+        elseif overspeed == 3 then
+            brakesused = 3
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points"
+        elseif overspeed == 4 then
+            brakesused = 3
+            tiresused = 1
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points and " .. tiresused .. " tire wear points"
+        elseif overspeed == 5 then
+            brakesused = 3
+            tiresused = 2
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points and " .. tiresused .. " tire wear points"
+        elseif overspeed == 6 then
+            brakesused = 3
+            tiresused = 3
+            txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points and " .. tiresused .. " tire wear points"
+        elseif overspeed > 6 then
+            -- crash
+            brakesused = 99
+            tiresused = 99
+        end
+        if cars[carindex].wpbrakes >= brakesused and cars[carindex].wptyres >= tiresused then
+            lovelyToasts.show(txt, 7, "middle")     --! check if txt is ever nil/empty
+        else
+            txt = "Car #" .. carindex .. " is blocked and crashes out"
+            eliminateCar(carindex, false, txt)           -- carindex, isSpun, msg
+        end
+        cars[carindex].movesleft = 0
+        cars[carindex].turns = cars[carindex].turns + 1
+        incCurrentPlayer()
     end
 end
 
@@ -816,7 +825,7 @@ local function applyBrake(carindex)
             cars[carindex].movesleft = cars[carindex].movesleft - 1
             cars[carindex].wpbrakes = cars[carindex].wpbrakes - 1
             local txt = "Car #" .. carindex .. " used 1 brake point"
-            lovelyToasts.show(txt, 10, "middle")
+            lovelyToasts.show(txt, 5, "middle")
 
             if cars[1].movesleft < 1 then
                 cars[1].movesleft = 0
@@ -825,7 +834,20 @@ local function applyBrake(carindex)
             end
         else
             if carindex == 1 then
-                lovelyToasts.show("No brake points available!", 10, "middle")
+                lovelyToasts.show("No brake points available!", 5, "middle")
+            end
+            -- check if car needs to crash out
+            local isblocked = true
+            local currentcell = cars[1].cell
+            for k, v in pairs(racetrack[currentcell].link) do
+                if isCellClear(k) then
+                    isblocked = false
+                end
+            end
+            if isblocked and cars[1].wpbrakes <= 1 then
+                local txt = "You car is blocked and you have no brakes. You are eliminated."
+                eliminateCar(1, false, txt)           -- carindex, isSpun, msg
+                incCurrentPlayer()
             end
         end
     else
@@ -1135,11 +1157,11 @@ function race.mousereleased(rx, ry, x, y, button)
                 -- try to move the car to the selected cell if linked
                 if not cars[1].isEliminated then
                     if cars[1].movesleft > 0 then
-                        local currentcell = cars[1].cell
+                        local originalcell = cars[1].cell
                         local desiredcell = getSelectedCell()
 
                         if desiredcell ~= nil then
-                            if racetrack[currentcell].link[desiredcell] == true then
+                            if racetrack[originalcell].link[desiredcell] == true then
                                 -- move is legal but is cell blocked?
                                 if isCellClear(desiredcell) then
                                     executeLegalMove(1, desiredcell)
@@ -1293,79 +1315,82 @@ function race.draw()
         love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
 
         -- draw the oil on top of the background
-        for k, v in pairs(oilslick) do
-            if v == true then
-                local drawx = racetrack[k].x
-                local drawy = racetrack[k].y
-                local rotation = racetrack[k].rotation
-                love.graphics.setColor(1,1,1,1)
-                love.graphics.draw(IMAGE[enum.imageOil], drawx, drawy, rotation, 1, 1, 30, 13)
-            end
-        end
-
-    end
-
-    -- draw the cars
-    for i = 1, numofcars do
-        local drawx = racetrack[cars[i].cell].x
-        local drawy = racetrack[cars[i].cell].y
-
-        if cars[i].isEliminated then
-            -- don't draw the car
-        else
-            love.graphics.setColor(1,1,1,1)     -- white
-            local rotation = racetrack[cars[i].cell].rotation
-            if cars[i].isSpun then      -- draw car backwards
-                rotation = rotation + math.pi   -- pi = half a circle (in radians)
-                if rotation > 2 * math.pi then
-                    rotation = rotation - (2 * math.pi)
+        if currentplayer > 0 then
+            for k, v in pairs(oilslick) do
+                if v == true then
+                    local drawx = racetrack[k].x
+                    local drawy = racetrack[k].y
+                    local rotation = racetrack[k].rotation
+                    love.graphics.setColor(1,1,1,1)
+                    love.graphics.draw(IMAGE[enum.imageOil], drawx, drawy, rotation, 1, 1, 30, 13)
                 end
             end
-            love.graphics.draw(CARIMAGE[i], drawx, drawy, rotation , 1, 1, 32, 15)
         end
     end
 
-    -- draw number of moves left beside the mouse
-    if currentplayer == 1 then
-        if cars[1].movesleft > 0 then
-            drawx, drawy = love.mouse.getPosition()
-            drawx, drawy = cam:toWorld(drawx, drawy)
+    if currentplayer > 0 then
+        -- draw the cars
+        for i = 1, numofcars do
+            local drawx = racetrack[cars[i].cell].x
+            local drawy = racetrack[cars[i].cell].y
 
-            love.graphics.setColor(1,1,1,1)     -- white
-            if racetrack[cars[1].cell].isCorner then
-                --! make the move left counter change colours here
-                if cars[1].brakestaken >= racetrack[cars[1].cell].speedCheck then
-                    love.graphics.setColor(0,1,0,1)
-                else
-                    love.graphics.setColor(1,1,0,1)
-                end
+            if cars[i].isEliminated then
+                -- don't draw the car
             else
                 love.graphics.setColor(1,1,1,1)     -- white
-            end
-
-            love.graphics.setFont(FONT[enum.fontCorporate])
-            love.graphics.print(cars[1].movesleft, drawx + 20, drawy - 5)
-            love.graphics.setFont(FONT[enum.fontDefault])
-        end
-    end
-
-    -- draw the ghost, if there is one
-    if currentplayer == 1 and cars[1].isOffGrid then
-        if ghost ~= nil then        -- will be nil if no ghost.dat file exists
-            if ghost[numberofturns + 1] ~= nil then
-                local ghostcell = ghost[numberofturns + 1]
-
-                local drawx = racetrack[ghostcell].x
-                local drawy = racetrack[ghostcell].y
-                love.graphics.setColor(1,1,1,0.5)
-                love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[ghostcell].rotation , 1, 1, 32, 15)
+                local rotation = racetrack[cars[i].cell].rotation
+                if cars[i].isSpun then      -- draw car backwards
+                    rotation = rotation + math.pi   -- pi = half a circle (in radians)
+                    if rotation > 2 * math.pi then
+                        rotation = rotation - (2 * math.pi)
+                    end
+                end
+                love.graphics.draw(CARIMAGE[i], drawx, drawy, rotation , 1, 1, 32, 15)
             end
         end
-    end
 
-    -- draw any track knowledge known to the bots
-    if love.keyboard.isDown("k") then
-        drawKnowledge()
+        -- draw number of moves left beside the mouse
+        if currentplayer == 1 then
+            if cars[1].movesleft > 0 then
+                drawx, drawy = love.mouse.getPosition()
+                drawx, drawy = cam:toWorld(drawx, drawy)
+
+                love.graphics.setColor(1,1,1,1)     -- white
+                if racetrack[cars[1].cell].isCorner then
+                    --! make the move left counter change colours here
+                    if cars[1].brakestaken >= racetrack[cars[1].cell].speedCheck then
+                        love.graphics.setColor(0,1,0,1)
+                    else
+                        love.graphics.setColor(1,1,0,1)
+                    end
+                else
+                    love.graphics.setColor(1,1,1,1)     -- white
+                end
+
+                love.graphics.setFont(FONT[enum.fontCorporate])
+                love.graphics.print(cars[1].movesleft, drawx + 20, drawy - 5)
+                love.graphics.setFont(FONT[enum.fontDefault])
+            end
+        end
+
+        -- draw the ghost, if there is one
+        if currentplayer == 1 and cars[1].isOffGrid then
+            if ghost ~= nil then        -- will be nil if no ghost.dat file exists
+                if ghost[numberofturns + 1] ~= nil then
+                    local ghostcell = ghost[numberofturns + 1]
+
+                    local drawx = racetrack[ghostcell].x
+                    local drawy = racetrack[ghostcell].y
+                    love.graphics.setColor(1,1,1,0.5)
+                    love.graphics.draw(IMAGE[enum.imageCar], drawx, drawy, racetrack[ghostcell].rotation , 1, 1, 32, 15)
+                end
+            end
+        end
+
+        -- draw any track knowledge known to the bots
+        if love.keyboard.isDown("k") then       --! this seems to be duplicated code
+            drawKnowledge()
+        end
     end
 
     -- draw any mouse line things
@@ -1448,7 +1473,9 @@ function race.draw()
     lovelyToasts.draw()     -- should this be before detach?
 
     -- draw the sidebar
-    drawSidebar()
+    if currentplayer > 0 then
+        drawSidebar()
+    end
 
 
     -- draw the gear stick on top of the sidebarwidth
@@ -1456,9 +1483,11 @@ function race.draw()
         drawGearStick(cars[1].gear)
     end
 
-    if not EDIT_MODE then
-        -- draw the topbar (gearbox matrix)
-        drawGearboxMatrix()
+    if currentplayer > 0 then
+        if not EDIT_MODE then
+            -- draw the topbar (gearbox matrix)
+            drawGearboxMatrix()
+        end
     end
 
     -- edit mode
@@ -1511,6 +1540,10 @@ function race.update(dt)
         if pausetimer <= 0 then
             moveBots()
         end
+    elseif currentplayer == 0 then
+        -- race over
+        racetrack = {}      --! probably need to check for trainer mode
+        cars = {}
     else
     end
 
@@ -1559,29 +1592,3 @@ function race.loadButtons()
 end
 
 return race
-
-
--- ****************************************************************
--- this code inspects the whol path and removes the whole path if there is a single blockage
--- local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
---
--- -- print("This is the first path:")
--- -- print(inspect(allpaths[1]))
---
--- -- cycle through all the paths and remove the one's that are blocked
--- for i = #allpaths, 1, -1 do
---     -- for this path, i, scan for a block
---     local deletepath = false
---     for j = #allpaths[i], 1, -1 do          -- loop through every cell in this one path
---         if not isCellClear(allpaths[i][j]) then
---             deletepath = true
---             print("Cell #" .. allpaths[i][j] .. " is blocked")
---         end
---     end
---     -- after looping, see if path should be removed
---     if deletepath then
---         table.remove(allpaths, i)
---         print("Removing whole path")
---     end
--- end
--- **********************************************************************

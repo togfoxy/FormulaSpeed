@@ -41,6 +41,13 @@ function podium.draw()
     buttons.drawButtons()
 end
 
+function podium.update()
+
+    if TRAINER_MODE then
+        cf.swapScreen(enum.sceneRace, SCREEN_STACK)
+    end
+end
+
 function podium.loadButtons()
     -- call this from love.load()
     -- ensure buttons.drawButtons() is added to the scene.draw() function
