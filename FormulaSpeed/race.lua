@@ -23,6 +23,8 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
+local PathThreshold = 50                -- used by 'getPaths' to tune the algorithm workload
+
 local function eliminateCar(carindex, isSpun, msg)
     -- it has been determined this car needs to be eliminated
     -- operates on global PODIUM
@@ -38,6 +40,7 @@ local function eliminateCar(carindex, isSpun, msg)
 
     if msg ~= nil then
         lovelyToasts.show(msg, 7, "middle", msg)
+        print(msg)
     else
         print("Elimination without a msg!")
         error(43)
@@ -158,7 +161,7 @@ local function incCurrentPlayer()
         cf.swapScreen(enum.scenePodium, SCREEN_STACK)   -- note: doing this doesn't stop the rest of the below code executing
         print("All cars finished or eliminated")
         currentplayer = 0
-        -- racetrack = {}
+        -- PLAYERCAR = cf.deepcopy(cars[1])
     end
 
     -- custom sort the table of cars that are still in play
@@ -274,6 +277,61 @@ local function removeLinksToCell(cell)
     end
 end
 
+local function resetGearbox(carindex)
+
+    cars[carindex].gearbox = {}
+    cars[carindex].gearbox[1] = {}
+    cars[carindex].gearbox[1][1] = 1
+    cars[carindex].gearbox[1][2] = 2
+
+    cars[carindex].gearbox[2] = {}
+    cars[carindex].gearbox[2][1] = 2
+    cars[carindex].gearbox[2][2] = 4
+
+    cars[carindex].gearbox[3] = {}
+    cars[carindex].gearbox[3][1] = 4
+    cars[carindex].gearbox[3][2] = 8
+
+    cars[carindex].gearbox[4] = {}
+    cars[carindex].gearbox[4][1] = 7
+    cars[carindex].gearbox[4][2] = 12
+
+    cars[carindex].gearbox[5] = {}
+    cars[carindex].gearbox[5][1] = 11
+    cars[carindex].gearbox[5][2] = 20
+
+    cars[carindex].gearbox[6] = {}
+    cars[carindex].gearbox[6][1] = 21
+    cars[carindex].gearbox[6][2] = 30
+
+    -- random gearbox
+    -- cars[i].gearbox = {}
+    -- cars[i].gearbox[1] = {}
+    -- cars[i].gearbox[1][1] = 1
+    -- cars[i].gearbox[1][2] = love.math.random(1, 3)
+    --
+    -- cars[i].gearbox[2] = {}
+    -- cars[i].gearbox[2][1] = love.math.random(1, 3)
+    -- cars[i].gearbox[2][2] = love.math.random(1, 5)
+    -- if cars[i].gearbox[2][2] < cars[i].gearbox[2][1] then cars[i].gearbox[2][2] = cars[i].gearbox[2][1] end
+    --
+    -- cars[i].gearbox[3] = {}
+    -- cars[i].gearbox[3][1] = love.math.random(3, 5)
+    -- cars[i].gearbox[3][2] = love.math.random(7, 9)
+    --
+    -- cars[i].gearbox[4] = {}
+    -- cars[i].gearbox[4][1] = love.math.random(6, 8)
+    -- cars[i].gearbox[4][2] = love.math.random(11, 13)
+    --
+    -- cars[i].gearbox[5] = {}
+    -- cars[i].gearbox[5][1] = love.math.random(10, 12)
+    -- cars[i].gearbox[5][2] = love.math.random(19, 21)
+    --
+    -- cars[i].gearbox[6] = {}
+    -- cars[i].gearbox[6][1] = love.math.random(20, 22)
+    -- cars[i].gearbox[6][2] = love.math.random(29, 31)
+end
+
 local function loadRaceTrack()
     -- loads the hardcoded track into the racetrack variable
     racetrack = fileops.loadRaceTrack()
@@ -309,9 +367,18 @@ local function loadRaceTrack()
 	print("Sum of track knowledge is " .. tksum)
 	print("Average speed is " .. cf.round(tksum / #trackknowledge, 1))
 	-- error()
+    print("#racetrack = " .. #racetrack)
 end
 
 local function loadCars()
+
+    -- local car = fun.loadTableFromFile("playercar.dat")
+    -- if car == nil then
+    --     print("No car found")
+    -- else
+    --     print("Car loaded")
+    --     carLoaded = true
+    -- end
 
     for i = 1, numofcars do
         cars[i] = {}
@@ -351,12 +418,6 @@ local function loadCars()
         -- end
 
         cars[i].gear = 0
-        cars[i].wptyres = 6
-        cars[i].wpbrakes = 3
-        cars[i].wpgearbox = 3
-        cars[i].wpbody = 3
-        cars[i].wpengine = 3
-        cars[i].wphandling = 2
         cars[i].movesleft = 0
         cars[i].brakestaken = 0             -- how many times did car stop in current corner
         cars[i].isEliminated = false
@@ -366,36 +427,134 @@ local function loadCars()
         cars[i].isOffGrid = false               -- set to true on first corner to see if car has moved off grid
         cars[i].hasFinished = false             -- has finished the race
 
-        -- gearbox
-        cars[i].gearbox = {}
-        cars[i].gearbox[1] = {}
-        cars[i].gearbox[1][1] = 1
-        cars[i].gearbox[1][2] = love.math.random(1, 3)
+        -- if carLoaded and i == 1 then
+            -- cars[1].wptyres = car.wptyresmax
+            -- cars[1].wpbrakes = car.wpbrakesmax
+            -- cars[1].wpgearbox = car.wpgearboxmax
+            -- cars[1].wpbody = car.wpbodymax
+            -- cars[1].wpengine = car.wpenginemax
+            -- cars[1].wphandling = car.wphandlingmax
+            --
+            -- cars[1].wptyresmax = car.wptyresmax
+            -- cars[1].wpbrakesmax = car.wpbrakesmax
+            -- cars[1].wpgearboxmax = car.wpgearboxmax
+            -- cars[1].wpbodymax = car.wpbodymax
+            -- cars[1].wpenginemax = car.wpenginemax
+            -- cars[1].wphandlingmax = car.wphandlingmax
+            --
+            -- -- gearbox
+            -- cars[1].gearbox = {}
+            -- cars[1].gearbox[1] = {}
+            -- cars[1].gearbox[1][1] = car.gearboxsettings[1][1]
+            -- cars[1].gearbox[1][2] = car.gearboxsettings[1][2]
+            --
+            -- cars[1].gearbox[2] = {}
+            -- cars[1].gearbox[2][1] = car.gearboxsettings[2][1]
+            -- cars[1].gearbox[2][2] = car.gearboxsettings[2][2]
+            --
+            -- cars[1].gearbox[3] = {}
+            -- cars[1].gearbox[3][1] = car.gearboxsettings[3][1]
+            -- cars[1].gearbox[3][2] = car.gearboxsettings[3][2]
+            --
+            -- cars[1].gearbox[4] = {}
+            -- cars[1].gearbox[4][1] = car.gearboxsettings[4][1]
+            -- cars[1].gearbox[4][2] = car.gearboxsettings[4][2]
+            --
+            -- cars[1].gearbox[5] = {}
+            -- cars[1].gearbox[5][1] = car.gearboxsettings[5][1]
+            -- cars[1].gearbox[5][2] = car.gearboxsettings[5][2]
+            --
+            -- cars[1].gearbox[6] = {}
+            -- cars[1].gearbox[6][1] = car.gearboxsettings[6][1]
+            -- cars[1].gearbox[6][2] = car.gearboxsettings[6][2]
+            --
+            -- cars[1].gearboxsettings = {}
+            -- cars[1].gearboxsettings[1] = {}
+            -- cars[1].gearboxsettings[1][1] = car.gearboxsettings[1][1]
+            -- cars[1].gearboxsettings[1][2] = car.gearboxsettings[1][2]
+            -- cars[1].gearboxsettings[2] = {}
+            -- cars[1].gearboxsettings[2][1] = car.gearboxsettings[2][1]
+            -- cars[1].gearboxsettings[2][2] = car.gearboxsettings[2][2]
+            -- cars[1].gearboxsettings[3] = {}
+            -- cars[1].gearboxsettings[3][1] = car.gearboxsettings[3][1]
+            -- cars[1].gearboxsettings[3][2] = car.gearboxsettings[3][1]
+            -- cars[1].gearboxsettings[4] = {}
+            -- cars[1].gearboxsettings[4][1] = car.gearboxsettings[4][1]
+            -- cars[1].gearboxsettings[4][2] = car.gearboxsettings[4][2]
+            -- cars[1].gearboxsettings[5] = {}
+            -- cars[1].gearboxsettings[5][1] = car.gearboxsettings[5][1]
+            -- cars[1].gearboxsettings[5][2] = car.gearboxsettings[5][2]
+            -- cars[1].gearboxsettings[6] = {}
+            -- cars[1].gearboxsettings[6][1] = car.gearboxsettings[6][1]
+            -- cars[1].gearboxsettings[6][2] = car.gearboxsettings[6][2]
+        -- else
+            cars[i].wptyres = 6
+            cars[i].wptyresmax = 6
+            cars[i].wpbrakes = 3
+            cars[i].wpbrakesmax = 3
+            cars[i].wpgearbox = 3
+            cars[i].wpgearboxmax = 3
+            cars[i].wpbody = 3
+            cars[i].wpbodymax = 3
+            cars[i].wpengine = 3
+            cars[i].wpenginemax = 3
+            cars[i].wphandling = 2
+            cars[i].wphandlingmax = 2
 
-        cars[i].gearbox[2] = {}
-        cars[i].gearbox[2][1] = love.math.random(1, 3)
-        cars[i].gearbox[2][2] = love.math.random(1, 5)
-        if cars[i].gearbox[2][2] < cars[i].gearbox[2][1] then cars[i].gearbox[2][2] = cars[i].gearbox[2][1] end
+            -- gearbox
+            cars[i].gearbox = {}
+            cars[i].gearbox[1] = {}
+            cars[i].gearbox[1][1] = 1
+            cars[i].gearbox[1][2] = 2
+            cars[i].gearboxsettings = {}
+            cars[i].gearboxsettings[1] = {}
+            cars[i].gearboxsettings[1][1] = 1
+            cars[i].gearboxsettings[1][2] = 2
 
-        cars[i].gearbox[3] = {}
-        cars[i].gearbox[3][1] = love.math.random(3, 5)
-        cars[i].gearbox[3][2] = love.math.random(7, 9)
+            cars[i].gearbox[2] = {}
+            cars[i].gearbox[2][1] = 2
+            cars[i].gearbox[2][2] = 4
+            cars[i].gearboxsettings[2] = {}
+            cars[i].gearboxsettings[2][1] = 2
+            cars[i].gearboxsettings[2][2] = 4
 
-        cars[i].gearbox[4] = {}
-        cars[i].gearbox[4][1] = love.math.random(6, 8)
-        cars[i].gearbox[4][2] = love.math.random(11, 13)
+            cars[i].gearbox[3] = {}
+            cars[i].gearbox[3][1] = 4
+            cars[i].gearbox[3][2] = 8
+            cars[i].gearboxsettings[3] = {}
+            cars[i].gearboxsettings[3][1] = 4
+            cars[i].gearboxsettings[3][2] = 8
 
-        cars[i].gearbox[5] = {}
-        cars[i].gearbox[5][1] = love.math.random(10, 12)
-        cars[i].gearbox[5][2] = love.math.random(19, 21)
+            cars[i].gearbox[4] = {}
+            cars[i].gearbox[4][1] = 7
+            cars[i].gearbox[4][2] = 12
+            cars[i].gearboxsettings[4] = {}
+            cars[i].gearboxsettings[4][1] = 7
+            cars[i].gearboxsettings[4][2] = 12
 
-        cars[i].gearbox[6] = {}
-        cars[i].gearbox[6][1] = love.math.random(20, 22)
-        cars[i].gearbox[6][2] = love.math.random(29, 31)
+            cars[i].gearbox[5] = {}
+            cars[i].gearbox[5][1] = 11
+            cars[i].gearbox[5][2] = 20
+            cars[i].gearboxsettings[5] = {}
+            cars[i].gearboxsettings[5][1] = 11
+            cars[i].gearboxsettings[5][2] = 20
+
+            cars[i].gearbox[6] = {}
+            cars[i].gearbox[6][1] = 21
+            cars[i].gearbox[6][2] = 30
+            cars[i].gearboxsettings[6] = {}
+            cars[i].gearboxsettings[6][1] = 21
+            cars[i].gearboxsettings[6][2] = 30
+        -- end
     end
+
+    -- fun.saveTableToFile("playercar.dat", cars[1])
 
     -- load the ghost history, if there is one
     ghost = fileops.loadGhost()
+    if ghost ~= nil then
+        print("Ghost loaded")
+    end
 
     if TRAINER_MODE then
         cars[1].isEliminated = true
@@ -663,7 +822,6 @@ local function executeLegalMove(carindex, desiredcell)
     else
         pausetimer = 1.0			-- seconds
     end
-
 end
 
 local function botSelectGear(botnumber)
@@ -680,13 +838,13 @@ local function getAllPaths(rootcell, movesneeded, path, allpaths)
     assert(movesneeded > 0)
 
     for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
-        if link == true and isCellClear(linkedcellnumber) then
+        if link == true then
             table.insert(path, linkedcellnumber)
             if #path >= movesneeded then
                 local temptable = cf.deepcopy(path)
                 table.insert(allpaths, temptable)
                 table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-                if #allpaths >= 5 then
+                if #allpaths >= PathThreshold then
                     return(allpaths)        --!
                 end
             else
@@ -705,15 +863,14 @@ local function returnBestPath(carindex)
 
     local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
 
-    print("A full list of paths is discovered. Proceeding to truncate shortened paths")
-    -- print("All available paths:" .. inspect(allpaths))
+    -- print("Reviewing these paths for blocks: " .. inspect(allpaths))
 
     -- traverse each path. If a block is found then delete that cell and every cell after that block
     for i = #allpaths, 1, -1 do
-       -- scan this path (i) for a blockage
-       -- print("Scanning this path for a block: " .. inspect(allpaths[i]))
-       local blockedcell        -- nil
-       for j = 1, #allpaths[i] do
+        -- scan this path (i) for a blockage
+        -- print("Scanning this path for a block: " .. inspect(allpaths[i]))
+        local blockedcell        -- nil
+        for j = 1, #allpaths[i] do
             if not isCellClear(allpaths[i][j]) then
                 -- truncate this table at this point (j)
                 for k = #allpaths[i], j, -1 do
@@ -734,8 +891,17 @@ local function returnBestPath(carindex)
     for i = 1, #allpaths do
         if #allpaths[i] > 0 then
             -- path is not empty
-            if longestpath == nil or #allpaths[i] > longestpath then
+            if longestpath == nil then
                 -- this is the new longest path
+                longestpath = #allpaths[i]
+                longestpathindex = i
+            elseif #allpaths[i] == longestpath then
+                -- paths are equal. Add a bit of randomness so different paths are utilised and the track knowledge grows
+                if love.math.random(1,2) == 1 then
+                    longestpath = #allpaths[i]
+                    longestpathindex = i
+                end
+            elseif #allpaths[i] > longestpath then
                 longestpath = #allpaths[i]
                 longestpathindex = i
             end
@@ -744,6 +910,7 @@ local function returnBestPath(carindex)
 
     --! if all paths are deleted then all paths are blocked. Need to choose the longest unblocked path
     if longestpathindex == nil then
+        print("Returning no paths")
         return {}
     end
     return allpaths[longestpathindex]
@@ -753,25 +920,27 @@ local function applyMoves(carindex)
 
     local txt = ""
     local path = {}
-    print("About to find the best path")
-    path = returnBestPath(carindex)
+    -- print("About to find the best path")
+    path = returnBestPath(carindex)             -- returns the single best path
 
-    print("Path length is " .. #path)
+    -- print("Path length is " .. #path)       --! path length = 0 when it shouldn't be
 
     while path ~= nil and #path > 0 do
         local desiredcell = path[1]
         executeLegalMove(carindex, desiredcell)
         if cars[carindex].movesleft < 1 then
             cars[carindex].turns = cars[carindex].turns + 1
-            incCurrentPlayer()
         end
         table.remove(path, 1)
     end
+    -- path is exhausted, but are moves exhausted?
     if cars[carindex].movesleft > 0 then
         -- valid path is exhausted but there are still moves left. Apply brake points
         local brakesused = 0
         local tiresused = 0
         local overspeed = cars[carindex].movesleft
+        cars[carindex].movesleft = 0
+        cars[carindex].turns = cars[carindex].turns + 1
         if overspeed == 1 then
             brakesused = 1
             txt = "Car #" .. carindex .. " uses " .. brakesused .. " brake wear points"
@@ -804,10 +973,8 @@ local function applyMoves(carindex)
             txt = "Car #" .. carindex .. " is blocked and crashes out"
             eliminateCar(carindex, false, txt)           -- carindex, isSpun, msg
         end
-        cars[carindex].movesleft = 0
-        cars[carindex].turns = cars[carindex].turns + 1
-        incCurrentPlayer()
     end
+    incCurrentPlayer()
 end
 
 local function moveBots()
@@ -929,7 +1096,7 @@ local function drawKnowledge()
             local drawx = racetrack[k].x
             local drawy = racetrack[k].y
 
-            love.graphics.setColor(0,0,0,1)
+            love.graphics.setColor(1,1,1,1)
             love.graphics.print(trackknowledge[k].moves, drawx, drawy)
 
         end
@@ -1008,6 +1175,15 @@ function race.keyreleased(key, scancode)
     if key == "e" then
         EDIT_MODE = not EDIT_MODE
         unselectAllCells()
+    end
+
+    if not EDIT_MODE and key == "c" then
+        -- cheat
+        cars[1].cell = 444
+        numberofturns = 998
+        for i = 2, numofcars do
+            eliminateCar(i, false, "")
+        end
     end
 
     if EDIT_MODE then
@@ -1124,19 +1300,19 @@ function race.mousereleased(rx, ry, x, y, button)
                         else
                             if cars[1].wpgearbox == 0 then
                                 -- gearbox damaged. Can only shift one gear. Ignore this click
-                                lovelyToasts.show("Gearbox damaged. Can only shift one gear", 10, "middle")
+                                lovelyToasts.show("Gearbox damaged. Can only shift one gear", 5, "middle")
                             else
                                 if gearchange == -2 then -- a rapid shift down. Damage gearbox
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].gear = desiredgear
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox point used", 10, "middle")
+                                    lovelyToasts.show("Gearbox point used", 5, "middle")
                                 elseif gearchange == -3 then -- a rapid shift down. Damage gearbox
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].wpbrakes = cars[1].wpbrakes - 1
                                     cars[1].gear = desiredgear
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox and brake point used", 10, "middle")
+                                    lovelyToasts.show("Gearbox and brake point used", 5, "middle")
                                 elseif gearchange == -4 then -- a rapid shift down. Damage gearbox
                                     cars[1].wpgearbox = cars[1].wpgearbox - 1
                                     cars[1].wpbrakes = cars[1].wpbrakes - 1
@@ -1144,7 +1320,7 @@ function race.mousereleased(rx, ry, x, y, button)
                                     cars[1].gear = desiredgear
                                     oilslick[cars[1].cell] = true
                                     addCarMoves(1)      -- car index
-                                    lovelyToasts.show("Gearbox, brake and engine point used", 10, "middle")
+                                    lovelyToasts.show("Gearbox, brake and engine point used", 5, "middle")
                                 else
                                     -- illegal shift. Do nothing
                                 end
@@ -1522,7 +1698,12 @@ end
 
 function race.update(dt)
 
+print(#racetrack)
     if #racetrack == 0 then
+        currentplayer = 1
+        oilslick = {}
+        numberofturns = 0
+        
         loadRaceTrack()
         loadCars()
         loadGearStick()

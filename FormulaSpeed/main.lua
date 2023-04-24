@@ -15,7 +15,7 @@ bitser = require 'lib.bitser'
 -- https://github.com/gvx/bitser
 
 nativefs = require 'lib.nativefs'
--- https://github.com/togfoxy/Lovely-Toasts
+-- https://github.com/EngineerSmith/nativefs
 
 lovelyToasts = require 'lib.lovelyToasts'
 -- https://github.com/Loucee/Lovely-Toasts
@@ -28,6 +28,7 @@ fun = require 'functions'
 require 'fileops'
 
 -- these are project specific
+require 'mainmenu'
 require 'race'
 require 'podium'
 
@@ -44,6 +45,8 @@ function love.keypressed(key, scancode, isrepeat)
 	local currentscene = cf.currentScreenName(SCREEN_STACK)
 	if currentscene == enum.sceneRace then
 		race.keypressed(key, scancode)
+	elseif currentscene == enum.sceneMainMenu then
+		mainmenu.keypressed(key, scancode)
     end
 end
 
@@ -51,6 +54,8 @@ function love.keyreleased(key, scancode)
 	local currentscene = cf.currentScreenName(SCREEN_STACK)
 	if currentscene == enum.sceneRace then
 		race.keyreleased(key, scancode)
+	elseif currentscene == enum.scenePodium then
+		podium.keyreleased(key, scancode)
     end
 end
 
@@ -62,6 +67,8 @@ function love.mousereleased(x, y, button, isTouch)
 		race.mousereleased(rx, ry, x, y, button)		-- need to send through the res adjusted x/y and the 'real' x/y
 	elseif currentscene == enum.scenePodium then
 		podium.mousereleased(rx, ry, x, y, button)
+	elseif currentscene == enum.sceneMainMenu then
+		mainmenu.mousereleased(rx, ry, x, y, button)
 	end
 end
 
@@ -97,7 +104,7 @@ function love.load()
     -- fun.loadAudio()
 	fun.loadImages()
 
-	-- mainmenu.loadButtons()
+	mainmenu.loadButtons()
 	-- credits.loadButtons()
 	race.loadButtons()
 	podium.loadButtons()
@@ -109,8 +116,9 @@ function love.load()
 
 	love.window.setTitle("Speed " .. GAME_VERSION)
 
-	-- cf.AddScreen(enum.sceneMainMenu, SCREEN_STACK)
-    cf.addScreen(enum.sceneRace, SCREEN_STACK)
+	cf.addScreen(enum.sceneMainMenu, SCREEN_STACK)
+    -- cf.addScreen(enum.sceneRace, SCREEN_STACK)
+	-- cf.addScreen(enum.scenePodium, SCREEN_STACK)
 
 	love.keyboard.setKeyRepeat(true)
 
@@ -137,7 +145,7 @@ function love.draw()
     res.start()
 
     if currentscene == enum.sceneMainMenu then
-        -- mainmenu.draw()
+        mainmenu.draw()
     elseif currentscene == enum.sceneCredits then
         -- credits.draw()
     elseif currentscene == enum.sceneRace then

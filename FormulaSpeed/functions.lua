@@ -8,6 +8,10 @@ function functions.loadImages()
     IMAGE[enum.imageTrack] = love.graphics.newImage("assets/images/track.jpg")
     IMAGE[enum.imageOil] = love.graphics.newImage("assets/images/oil_64x28.png")
     IMAGE[enum.imageBrakeButton] = love.graphics.newImage("assets/images/brakebutton.png")
+    IMAGE[enum.imageMainMenu] = love.graphics.newImage("assets/images/mainmenu.jpg")
+    IMAGE[enum.imageGoldTrophy] = love.graphics.newImage("assets/images/trophy-gold.png")
+    IMAGE[enum.imageSilverTrophy] = love.graphics.newImage("assets/images/trophy-silver.png")
+    IMAGE[enum.imageBronzeTrophy] = love.graphics.newImage("assets/images/trophy-bronze.png")
 
     CARIMAGE[1] = love.graphics.newImage("assets/images/car1_64x29.png")
 	CARIMAGE[2] = love.graphics.newImage("assets/images/car2_64x29.png")
@@ -23,8 +27,37 @@ function functions.loadFonts()
     FONT[enum.fontMedium] = love.graphics.newFont("assets/fonts/Vera.ttf", 14)
     FONT[enum.fontLarge] = love.graphics.newFont("assets/fonts/Vera.ttf", 18)
     FONT[enum.fontCorporate] = love.graphics.newFont("assets/fonts/CorporateGothicNbpRegular-YJJ2.ttf", 36)
+    FONT[enum.fontalienEncounters48] = love.graphics.newFont("assets/fonts/aliee13.ttf", 48)
 
     love.graphics.setFont(FONT[enum.fontDefault])
+end
+
+function functions.loadTableFromFile(datfilename)
+    -- inputs: datfilename eg racetrack.dat
+    -- output: table or nil
+    local thistable = {}
+    local savefile = savedir .. datfilename
+	if nativefs.getInfo(savefile) then
+		contents, size = nativefs.read(savefile)
+	    thistable = bitser.loads(contents)
+        return thistable
+    else
+        return nil
+    end
+end
+
+function functions.saveTableToFile(datfilename, table)
+    -- inputs: datfilename eg racetrack.dat
+    -- inputs: table = the table that needs to be serialised and save
+    local savefile = savedir .. datfilename
+    local serialisedString = bitser.dumps(table)
+    local success, message = nativefs.write(savefile, serialisedString)
+    return success
+end
+
+function functions.deleteFile(datfilename)
+    local savefile = savedir .. datfilename
+    return nativefs.remove(savefile)
 end
 
 

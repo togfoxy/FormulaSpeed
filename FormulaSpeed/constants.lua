@@ -2,7 +2,7 @@ constants = {}
 
 function constants.load()
 
-    GAME_VERSION = "0.01"
+    GAME_VERSION = "1.0"
 
     SCREEN_STACK = {}
 
@@ -26,8 +26,17 @@ function constants.load()
     FONT = {}
     PODIUM = {}               -- where/if the car finished including number of turns
 
+    -- PLAYERCAR = {}              -- used to carry data between race and podium scene
 
     cam = nil       -- camera
+
+    -- set the folders based on fused or not fused
+    savedir = love.filesystem.getSourceBaseDirectory()
+    if love.filesystem.isFused() then
+        savedir = savedir .. "\\savedata\\"
+    else
+        savedir = savedir .. "/FormulaSpeed/savedata/"
+    end
 
     enums.load()
 
