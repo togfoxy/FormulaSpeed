@@ -38,5 +38,7 @@ function enums.load()
     enum.fontCorporate = 4
     enum.fontalienEncounters48 = 5
 
+    enum.audioMainMenu = 1
+
 end
 return enums

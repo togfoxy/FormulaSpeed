@@ -34,6 +34,11 @@ function mainmenu.draw()
 
 end
 
+function mainmenu.update(dt)
+    fun.playAudio(enum.audioMainMenu, true, false)
+
+end
+
 function mainmenu.loadButtons()
     -- call this from love.load()
     -- ensure buttons.drawButtons() is added to the scene.draw() function

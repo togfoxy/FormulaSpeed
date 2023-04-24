@@ -33,6 +33,22 @@ function functions.loadFonts()
     love.graphics.setFont(FONT[enum.fontDefault])
 end
 
+function functions.loadAudio()
+
+    AUDIO[enum.audioMainMenu] = love.audio.newSource("assets/audio/Short Action Game Loop #2.mp3", "stream")
+
+end
+
+function functions.playAudio(audionumber, isMusic, isSound)
+    if isMusic and MUSIC_TOGGLE then
+        AUDIO[audionumber]:play()
+    end
+    if isSound and SOUND_TOGGLE then
+        AUDIO[audionumber]:play()
+    end
+    -- print("playing music/sound #" .. audionumber)
+end
+
 function functions.loadTableFromFile(datfilename)
     -- inputs: datfilename eg racetrack.dat
     -- output: table or nil
