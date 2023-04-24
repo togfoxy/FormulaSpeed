@@ -860,7 +860,7 @@ local function returnBestPath(carindex)
 
     local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
 
-    print("Reviewing these paths for blocks: " .. inspect(allpaths))
+    -- print("Reviewing these paths for blocks: " .. inspect(allpaths))
 
     -- traverse each path. If a block is found then delete that cell and every cell after that block
     for i = #allpaths, 1, -1 do

@@ -1,43 +1,10 @@
 podium = {}
 
 local podiumloaded = false
-local shopitem = {}
-local car = {}
+-- local shopitem = {}
+-- local car = {}
 local career = {}
 
-local function drawShopItems()
-
-    local drawx = 1050
-    local drawy = 250
-
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.print("Gear #", drawx, drawy)
-    drawx = drawx + 57
-    love.graphics.print("Low", drawx, drawy)
-    drawx = drawx + 50
-    love.graphics.print("High", drawx, drawy)
-    drawx = drawx + 50
-
-    drawx = 1000
-    drawy = 275
-
-    for shopindex, gearitem in pairs(shopitem) do
-       love.graphics.setColor(1,1,1,1)
-
-       love.graphics.print("For sale: ", drawx, drawy)
-       drawx = drawx + 65
-       love.graphics.print(gearitem.gear, drawx, drawy)
-       drawx = drawx + 50
-       love.graphics.print(gearitem.lowestspeed, drawx, drawy)
-       drawx = drawx + 50
-       love.graphics.print(gearitem.highestspeed, drawx, drawy)
-       drawx = drawx + 50
-
-       drawx = 1000
-       drawy = drawy + 50
-
-    end
-end
 
 local function drawCareer()
     local drawx = 650
@@ -75,21 +42,7 @@ local function drawCareer()
 
 end
 
-local function drawCarComponents()
 
-    -- print(inspect(car.gearboxsettings))
-
-    local drawx = 400
-    local drawy = 250
-
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.print("Gearbox configuration:", drawx, drawy)
-    drawy = drawy + 30
-    for i = 1, 6 do         -- six gears
-        love.graphics.print("Gear " .. i .. " : " .. car.gearboxsettings[i][1] .. " - " .. car.gearboxsettings[i][2], drawx, drawy )
-        drawy = drawy + 30
-    end
-end
 
 function podium.keyreleased(key, scancode)
     if key == "ESCAPE" then
@@ -105,8 +58,8 @@ function podium.mousereleased(rx, ry, x, y, button)
     if clickedButtonID == enum.buttonPodiumExit then
         love.event.quit()
     elseif clickedButtonID == enum.buttonPodiumRestart then
-        print("Saving player car to file")
-        fun.saveTableToFile("playercar.dat", PLAYERCAR)
+        -- print("Saving player car to file")
+        -- fun.saveTableToFile("playercar.dat", PLAYERCAR)
         cf.swapScreen(enum.sceneRace, SCREEN_STACK)
     end
 end
@@ -163,8 +116,6 @@ function podium.draw()
             alpha = 0.5
         end
 
-        --! don't forget DNF
-
         love.graphics.setColor(1,1,1,alpha)
         love.graphics.draw(CARIMAGE[PODIUM[i].car], drawx, drawy)
 
@@ -182,34 +133,33 @@ function podium.update()
     if not podiumloaded then
         podiumloaded = true
 
-        -- debug. load fake podium
-        PODIUM = {}
-        for i = 1, 6 do
-            local thiswin = {}
-            thiswin.car = i
-            if love.math.random(1, 2) == 1 then
-                thiswin.turns = 999
-            else
-                thiswin.turns = love.math.random(15, 24)
-            end
-            table.insert(PODIUM, thiswin)
-        end
-
+        -- -- debug. load fake podium
+        -- PODIUM = {}
+        -- for i = 1, 6 do
+        --     local thiswin = {}
+        --     thiswin.car = i
+        --     if love.math.random(1, 2) == 1 then
+        --         thiswin.turns = 999
+        --     else
+        --         thiswin.turns = love.math.random(15, 24)
+        --     end
+        --     table.insert(PODIUM, thiswin)
+        -- end
 
         table.sort(PODIUM, function(k1, k2)
             return k1.turns < k2.turns
         end)
 
-        print(inspect((PODIUM)))
+        print(inspect(PODIUM))
 
         -- load car configuration
-        car = fun.loadTableFromFile("playercar.dat")
-        if car == nil then
-            print("No car found")
-        else
-            print("Car loaded")
-        end
-        assert(car ~= nil)
+        -- car = fun.loadTableFromFile("playercar.dat")
+        -- if car == nil then
+        --     print("No car found")
+        -- else
+        --     print("Car loaded")
+        -- end
+        -- assert(car ~= nil)
 
         -- load career
         career = fun.loadTableFromFile("career.dat")
@@ -228,43 +178,41 @@ function podium.update()
         print("Career table:")
         print(inspect(career))
 
-        -- determine which gears are on sale
-        shopitem[1] = {}
-        shopitem[1].gear = love.math.random(1,6)
-        shopitem[2] = {}
-        shopitem[2].gear = love.math.random(1,6)
-        table.sort(shopitem, function(k1, k2)
-            if k1.gear < k2.gear then
-                return true
-            else
-                return false
-            end
-        end)
+        -- -- determine which gears are on sale
+        -- shopitem[1] = {}
+        -- shopitem[1].gear = love.math.random(1,6)
+        -- shopitem[2] = {}
+        -- shopitem[2].gear = love.math.random(1,6)
+        -- table.sort(shopitem, function(k1, k2)
+        --     if k1.gear < k2.gear then
+        --         return true
+        --     else
+        --         return false
+        --     end
+        -- end)
 
         -- random gear configuration
-        for shopindex, gearitem in pairs(shopitem) do
-            if gearitem.gear == 1 then
-                gearitem.lowestspeed = 1
-                gearitem.highestspeed = love.math.random(1, 3)
-            elseif gearitem.gear == 2 then
-                gearitem.lowestspeed = love.math.random(1, 3)
-                gearitem.highestspeed = love.math.random(gearitem.lowestspeed, 5)       -- noting we don't want high to be lower than low
-            elseif gearitem.gear == 3 then
-                gearitem.lowestspeed = love.math.random(3, 5)
-                gearitem.highestspeed = love.math.random(7, 9)
-            elseif gearitem.gear == 4 then
-                gearitem.lowestspeed = love.math.random(6, 8)
-                gearitem.highestspeed = love.math.random(11, 13)
-            elseif gearitem.gear == 5 then
-                gearitem.lowestspeed = love.math.random(10, 12)
-                gearitem.highestspeed = love.math.random(19, 21)
-            elseif gearitem.gear == 6 then
-                gearitem.lowestspeed = love.math.random(20, 22)
-                gearitem.highestspeed = love.math.random(29, 31)
-            end
-        end
-
-
+        -- for shopindex, gearitem in pairs(shopitem) do
+        --     if gearitem.gear == 1 then
+        --         gearitem.lowestspeed = 1
+        --         gearitem.highestspeed = love.math.random(1, 3)
+        --     elseif gearitem.gear == 2 then
+        --         gearitem.lowestspeed = love.math.random(1, 3)
+        --         gearitem.highestspeed = love.math.random(gearitem.lowestspeed, 5)       -- noting we don't want high to be lower than low
+        --     elseif gearitem.gear == 3 then
+        --         gearitem.lowestspeed = love.math.random(3, 5)
+        --         gearitem.highestspeed = love.math.random(7, 9)
+        --     elseif gearitem.gear == 4 then
+        --         gearitem.lowestspeed = love.math.random(6, 8)
+        --         gearitem.highestspeed = love.math.random(11, 13)
+        --     elseif gearitem.gear == 5 then
+        --         gearitem.lowestspeed = love.math.random(10, 12)
+        --         gearitem.highestspeed = love.math.random(19, 21)
+        --     elseif gearitem.gear == 6 then
+        --         gearitem.lowestspeed = love.math.random(20, 22)
+        --         gearitem.highestspeed = love.math.random(29, 31)
+        --     end
+        -- end
 
     end
 
@@ -341,3 +289,54 @@ function podium.loadButtons()
 end
 
 return podium
+
+
+-- local function drawShopItems()
+--
+--     local drawx = 1050
+--     local drawy = 250
+--
+--     love.graphics.setColor(1,1,1,1)
+--     love.graphics.print("Gear #", drawx, drawy)
+--     drawx = drawx + 57
+--     love.graphics.print("Low", drawx, drawy)
+--     drawx = drawx + 50
+--     love.graphics.print("High", drawx, drawy)
+--     drawx = drawx + 50
+--
+--     drawx = 1000
+--     drawy = 275
+--
+--     for shopindex, gearitem in pairs(shopitem) do
+--        love.graphics.setColor(1,1,1,1)
+--
+--        love.graphics.print("For sale: ", drawx, drawy)
+--        drawx = drawx + 65
+--        love.graphics.print(gearitem.gear, drawx, drawy)
+--        drawx = drawx + 50
+--        love.graphics.print(gearitem.lowestspeed, drawx, drawy)
+--        drawx = drawx + 50
+--        love.graphics.print(gearitem.highestspeed, drawx, drawy)
+--        drawx = drawx + 50
+--
+--        drawx = 1000
+--        drawy = drawy + 50
+--
+--     end
+-- end
+
+-- local function drawCarComponents()
+--
+--     -- print(inspect(car.gearboxsettings))
+--
+--     local drawx = 400
+--     local drawy = 250
+--
+--     love.graphics.setColor(1,1,1,1)
+--     love.graphics.print("Gearbox configuration:", drawx, drawy)
+--     drawy = drawy + 30
+--     for i = 1, 6 do         -- six gears
+--         love.graphics.print("Gear " .. i .. " : " .. car.gearboxsettings[i][1] .. " - " .. car.gearboxsettings[i][2], drawx, drawy )
+--         drawy = drawy + 30
+--     end
+-- end
