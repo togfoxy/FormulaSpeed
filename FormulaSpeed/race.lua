@@ -51,28 +51,6 @@ local function eliminateCar(carindex, isSpun, msg)
     oilslick[cell] = true
 end
 
-local function getForwardCornerCells(cell)
-    -- used during editing. Return a table of all the corner cells in front of this one
-    -- including this one
-    --! not yet working
-    local stack = {}
-    table.insert(stack, cell)
-    for k, v in pairs(racetrack[cell].link) do
-        if v == true then       -- k = cell number. v = true/false
-            if racetrack[k].isCorner then
-                -- local thiscell = getForwardCornerCells(k)
-                -- table.insert(stack, getForwardCornerCells(k))
-                local newstack = {}
-                newstack = getForwardCornerCells(k)
-                for q, w in pairs(newstack) do
-                    table.insert(stack, w)
-                end
-            end
-        end
-    end
-    return stack
-end
-
 local function allCarsLeftGrid()
     -- returns true if all cars have crossed the finish line at least once
     for i = 1, numofcars do
@@ -90,9 +68,6 @@ local function getDistanceToFinish(startcell, ignoreFirstFinish)
     -- input: ignoreFirstFinish = set to TRUE when the car is still on the grid and the first crossing of the finish
     --          line needs to be ignored
 	-- NOTE: this function doesn't try to find the shortest path meaning it is not very efficient (or accurate)
-	-- NOTE: gives incorrect results for cars on the grid and not yet crossed the line.        --!
-
-    -- print("Cell #" .. startcell, ignoreFirstFinish)
 
 	local result       -- number
     local nextcell
@@ -899,7 +874,7 @@ local function getAllPaths(rootcell, movesneeded, path, allpaths)
                 table.insert(allpaths, temptable)
                 table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
                 if #allpaths >= PathThreshold then
-                    return(allpaths)        --!
+                    return(allpaths)
                 end
             else
                 local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
@@ -977,8 +952,6 @@ local function applyMoves(carindex)
     -- print("About to find the best path")
     path = returnBestPath(carindex)             -- returns the single best path
 
-    -- print("Path length is " .. #path)       --! path length = 0 when it shouldn't be
-
     while path ~= nil and #path > 0 do
         local desiredcell = path[1]
         executeLegalMove(carindex, desiredcell)
@@ -1022,7 +995,7 @@ local function applyMoves(carindex)
             tiresused = 99
         end
         if cars[carindex].wpbrakes >= brakesused and cars[carindex].wptyres >= tiresused then
-            lovelyToasts.show(txt, 7, "middle")     --! check if txt is ever nil/empty
+            lovelyToasts.show(txt, 7, "middle")
         else
             txt = "Car #" .. carindex .. " is blocked and crashes out"
             eliminateCar(carindex, false, txt)           -- carindex, isSpun, msg
@@ -1291,17 +1264,6 @@ function race.keyreleased(key, scancode)
                     if racetrack[cell].speedCheck > 3 then
                         racetrack[cell].speedCheck = nil
                     end
-
-                    -- -- map all corner cells in front of this cell as a speedcheck
-                    --! not yet working. Stack overflow
-                    -- if racetrack[cell].isCorner then
-                    --     local cornercells = {}
-                    --     local newvalue = racetrack[cell].speedCheck
-                    --     cornercells = getForwardCornerCells(cell)
-                    --     for k, v in pairs(cornercells) do
-                    --     	racetrack[v].speedCheck = newvalue
-                    --     end
-                    -- end
                 end
             end
         end
@@ -1587,7 +1549,7 @@ function race.draw()
 
                 love.graphics.setColor(1,1,1,1)     -- white
                 if racetrack[cars[1].cell].isCorner then
-                    --! make the move left counter change colours here
+                    -- make the move left counter change colours here
                     if cars[1].brakestaken >= racetrack[cars[1].cell].speedCheck then
                         love.graphics.setColor(0,1,0,1)
                     else
