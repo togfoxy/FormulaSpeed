@@ -66,6 +66,10 @@ end
 
 function podium.draw()
 
+    -- bground
+    love.graphics.setColor(1,1,1,0.25)      -- reduced alpha
+    love.graphics.draw(IMAGE[enum.imageFinish], 0 , 0, 0, 4, 4)
+
     local alpha
     -- draw trophy
     love.graphics.setColor(1,1,1,1)
