@@ -36,6 +36,7 @@ end
 function functions.loadAudio()
 
     AUDIO[enum.audioMainMenu] = love.audio.newSource("assets/audio/Short Action Game Loop #2.mp3", "stream")
+    AUDIO[enum.audioPodium] = love.audio.newSource("assets/audio/Triumphant Loop #2.mp3", "stream")
 
 end
 

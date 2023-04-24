@@ -138,6 +138,7 @@ function podium.update()
 
     if not podiumloaded then
         podiumloaded = true
+        fun.playAudio(enum.audioPodium, true, false)
 
         -- debug. load fake podium
         -- PODIUM = {}
