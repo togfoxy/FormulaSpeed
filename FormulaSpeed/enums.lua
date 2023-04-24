@@ -11,6 +11,9 @@ function enums.load()
     enum.buttonPodiumExit = 1
     enum.buttonBrake = 2
     enum.buttonPodiumRestart = 3
+    enum.buttonMainMenuRestartCareer = 4
+    enum.buttonMainMenuExitGame = 5
+    enum.buttonMainMenuContinue = 6
 
     enum.imageCell = 1
     enum.imageCar = 2
@@ -19,6 +22,7 @@ function enums.load()
     enum.imageCellFinish = 5
     enum.imageOil = 6
     enum.imageBrakeButton = 7
+    enum.imageMainMenu = 8
 
     enum.gamemodeGearSelect = 1
     enum.gamemodeMoveCar = 2
@@ -28,6 +32,7 @@ function enums.load()
     enum.fontMedium = 2
     enum.fontLarge = 3
     enum.fontCorporate = 4
+    enum.fontalienEncounters48 = 5
 
 end
 return enums
