@@ -95,7 +95,11 @@ end
 
 function love.load()
     res.init({width = 1920, height = 1080, mode = 2})
-	res.setMode(1920, 1080, {resizable = true})
+
+	local width, height
+	width, height = love.window.getDesktopDimensions( 1 )
+	-- res.setMode(1920, 1080, {resizable = true})
+	res.setMode(width, height, {resizable = true})
 
 	enums.load()
 	constants.load()
@@ -122,6 +126,7 @@ function love.load()
 
 	love.keyboard.setKeyRepeat(true)
 
+	lovelyToasts.canvasSize = {SCREEN_WIDTH, SCREEN_HEIGHT}
 	lovelyToasts.options.tapToDismiss = true
 	lovelyToasts.options.queueEnabled = true
 

@@ -367,7 +367,6 @@ local function loadRaceTrack()
 	print("Sum of track knowledge is " .. tksum)
 	print("Average speed is " .. cf.round(tksum / #trackknowledge, 1))
 	-- error()
-    print("#racetrack = " .. #racetrack)
 end
 
 local function loadCars()
@@ -1698,12 +1697,11 @@ end
 
 function race.update(dt)
 
-print(#racetrack)
     if #racetrack == 0 then
         currentplayer = 1
         oilslick = {}
         numberofturns = 0
-        
+
         loadRaceTrack()
         loadCars()
         loadGearStick()

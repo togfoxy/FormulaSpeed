@@ -5,10 +5,11 @@ local podiumloaded = false
 -- local car = {}
 local career = {}
 
-
 local function drawCareer()
-    local drawx = 650
-    local drawy = 100
+    -- 1920, 1080
+
+    local drawx = SCREEN_WIDTH / 3
+    local drawy = SCREEN_WIDTH / 10
 
     love.graphics.setColor(1,1,1,1)
     love.graphics.setFont(FONT[enum.fontalienEncounters48])
@@ -16,8 +17,8 @@ local function drawCareer()
     love.graphics.setFont(FONT[enum.fontDefault])
 
     love.graphics.setFont(FONT[enum.fontCorporate])
-    local drawx = 650
-    local drawy = 200
+    local drawx = SCREEN_WIDTH / 3
+    local drawy = SCREEN_HEIGHT * 0.25      -- odd, but works
     love.graphics.print("Placings", drawx + 100, drawy)
 
     drawy = drawy + 40
@@ -39,10 +40,7 @@ local function drawCareer()
         end
     end
     love.graphics.setFont(FONT[enum.fontDefault])
-
 end
-
-
 
 function podium.keyreleased(key, scancode)
     if key == "ESCAPE" then
@@ -71,51 +69,55 @@ function podium.draw()
     love.graphics.draw(IMAGE[enum.imageFinish], 0 , 0, 0, 4, 4)
 
     local alpha
-    -- draw trophy
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.draw(IMAGE[enum.imageGoldTrophy], 200, 200)
-    love.graphics.draw(IMAGE[enum.imageSilverTrophy], 100, 250)
-    love.graphics.draw(IMAGE[enum.imageBronzeTrophy], 300, 275)
 
-    -- draw podium
+    -- draw podium text
+    local drawx = SCREEN_WIDTH * 0.10
+    local drawy = SCREEN_WIDTH * 0.10
     love.graphics.setColor(1,1,1,1)
     love.graphics.setFont(FONT[enum.fontalienEncounters48])
-    love.graphics.print("Podium", 175, 100, 0 , 1, 1)
+    love.graphics.print("Podium", drawx - 15, drawy, 0 , 1, 1)
     love.graphics.setFont(FONT[enum.fontDefault])
 
+    -- draw trophy
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.draw(IMAGE[enum.imageGoldTrophy], SCREEN_WIDTH * 0.11, SCREEN_HEIGHT * 0.25)
+    love.graphics.draw(IMAGE[enum.imageSilverTrophy], SCREEN_WIDTH * 0.055, SCREEN_HEIGHT * 0.28)
+    love.graphics.draw(IMAGE[enum.imageBronzeTrophy], SCREEN_WIDTH * 0.16, SCREEN_HEIGHT * 0.31)
+
+    -- draw the cars
     for i = 1, #PODIUM do
         if i == 1 and PODIUM[i].turns < 999 then
-            drawx = 225
-            drawy = 325
+            drawx = SCREEN_WIDTH * 0.12
+            drawy = SCREEN_HEIGHT * 0.37
             alpha = 1
         end
         if i == 2 and PODIUM[i].turns < 999 then
-            drawx = 125
-            drawy = 375
+            drawx = SCREEN_WIDTH * 0.065
+            drawy = SCREEN_HEIGHT * 0.40
             alpha = 1
         end
         if i == 3 and PODIUM[i].turns < 999 then
-            drawx = 325
-            drawy = 400
+            drawx = SCREEN_WIDTH * 0.17
+            drawy = SCREEN_HEIGHT * 0.43
             alpha = 1
         end
         if i == 4 and PODIUM[i].turns < 999 then
-            drawx = 225
-            drawy = 500
+            drawx = SCREEN_WIDTH * 0.12
+            drawy = SCREEN_HEIGHT * 0.5
             alpha = 1
         end
         if i == 5 and PODIUM[i].turns < 999 then
-            drawx = 225
-            drawy = 550
+            drawx = SCREEN_WIDTH * 0.12
+            drawy = SCREEN_HEIGHT * 0.5
             alpha = 1
         end
         if i == 6 and PODIUM[i].turns < 999 then
-            drawx = 225
-            drawy = 600
+            drawx = SCREEN_WIDTH * 0.12
+            drawy = SCREEN_HEIGHT * 0.5
             alpha = 1
         end
         if PODIUM[i].turns == 999 then
-            drawx = 225
+            drawx = SCREEN_WIDTH * 0.12
             drawy = drawy + 40
             alpha = 0.5
         end
@@ -137,7 +139,7 @@ function podium.update()
     if not podiumloaded then
         podiumloaded = true
 
-        -- -- debug. load fake podium
+        -- debug. load fake podium
         -- PODIUM = {}
         -- for i = 1, 6 do
         --     local thiswin = {}
