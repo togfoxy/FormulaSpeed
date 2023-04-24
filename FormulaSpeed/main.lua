@@ -39,7 +39,8 @@ end
 function love.keypressed(key, scancode, isrepeat)
 
 	if key == "escape" then
-		love.event.quit()
+		-- love.event.quit()
+		cf.removeScreen(SCREEN_STACK)
 	end
 
 	local currentscene = cf.currentScreenName(SCREEN_STACK)

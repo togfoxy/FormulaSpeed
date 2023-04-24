@@ -1,6 +1,16 @@
 mainmenu = {}
 
 
+function mainmenu.keypressed(key, scancode)
+
+    if key == "ESCAPE" then
+        cf.removeScreen(SCREEN_STACK)
+    end
+
+    -- local currentscene = cf.currentScreenName(SCREEN_STACK)
+	-- if currentscene == enum.sceneRace then
+end
+
 function mainmenu.mousereleased(rx, ry, x, y, button)
 
     local clickedButtonID = buttons.getButtonID(rx, ry)
