@@ -380,9 +380,6 @@ local function loadCars()
         carLoaded = true
     end
 
-    print(inspect(car))
-
-
     for i = 1, numofcars do
         cars[i] = {}
         history[i] = {}         -- tracks the history for this race only

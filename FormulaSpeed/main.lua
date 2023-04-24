@@ -54,6 +54,8 @@ function love.keyreleased(key, scancode)
 	local currentscene = cf.currentScreenName(SCREEN_STACK)
 	if currentscene == enum.sceneRace then
 		race.keyreleased(key, scancode)
+	elseif currentscene == enum.scenePodium then
+		podium.keyreleased(key, scancode)
     end
 end
 
@@ -114,9 +116,9 @@ function love.load()
 
 	love.window.setTitle("Speed " .. GAME_VERSION)
 
-	cf.addScreen(enum.sceneMainMenu, SCREEN_STACK)
+	-- cf.addScreen(enum.sceneMainMenu, SCREEN_STACK)
     -- cf.addScreen(enum.sceneRace, SCREEN_STACK)
-	-- cf.addScreen(enum.scenePodium, SCREEN_STACK)
+	cf.addScreen(enum.scenePodium, SCREEN_STACK)
 
 	love.keyboard.setKeyRepeat(true)
 

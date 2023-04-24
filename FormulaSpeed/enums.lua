@@ -23,6 +23,9 @@ function enums.load()
     enum.imageOil = 6
     enum.imageBrakeButton = 7
     enum.imageMainMenu = 8
+    enum.imageGoldTrophy = 9
+    enum.imageSilverTrophy = 10
+    enum.imageBronzeTrophy = 11
 
     enum.gamemodeGearSelect = 1
     enum.gamemodeMoveCar = 2

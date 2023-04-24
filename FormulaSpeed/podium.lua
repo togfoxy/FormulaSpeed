@@ -40,15 +40,17 @@ local function drawShopItems()
 end
 
 local function drawCareer()
-    local drawx = 400
-    local drawy = 500
+    local drawx = 600
+    local drawy = 300
 
     love.graphics.setColor(1,1,1,1)
     love.graphics.print("Career stats", drawx, drawy)
     drawy = drawy + 50
     for i = 1, #career do
-        love.graphics.print(i .. ": " .. career[i], drawx, drawy)
-        drawy = drawy + 50
+        if career[i] ~= nil then
+            love.graphics.print(i .. ": " .. career[i], drawx, drawy)
+            drawy = drawy + 50
+        end
     end
 
 end
@@ -69,6 +71,12 @@ local function drawCarComponents()
     end
 end
 
+function podium.keyreleased(key, scancode)
+    if key == "ESCAPE" then
+        cf.removeScreen(SCREEN_STACK)       -- should return to main menu
+    end
+end
+
 function podium.mousereleased(rx, ry, x, y, button)
     -- call from love.mousereleased()
 
@@ -85,28 +93,53 @@ end
 
 function podium.draw()
 
-    local drawx = 100
-    local drawy = 100
-    local txt
-
+    -- draw trophy
     love.graphics.setColor(1,1,1,1)
-    love.graphics.print("Podium:", drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Car #          Time", drawx, drawy)
-    drawy = drawy + 35
+    love.graphics.draw(IMAGE[enum.imageGoldTrophy], 200, 200)
+    love.graphics.draw(IMAGE[enum.imageSilverTrophy], 100, 250)
+    love.graphics.draw(IMAGE[enum.imageBronzeTrophy], 300, 275)
+
+    -- draw podium
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.setFont(FONT[enum.fontalienEncounters48])
+    love.graphics.print("Podium", 175, 100, 0 , 1, 1)
+    love.graphics.setFont(FONT[enum.fontDefault])
 
     for i = 1, #PODIUM do
-        if PODIUM[i].turns < 999 then
-            txt = PODIUM[i].car .. "                " .. PODIUM[i].turns
-        else
-            txt = PODIUM[i].car .. "                DNF"
+        if i == 1 and PODIUM[i].turns < 999 then
+            drawx = 225
+            drawy = 325
         end
-        love.graphics.print(txt, drawx + 5, drawy)
+        if i == 2 and PODIUM[i].turns < 999 then
+            drawx = 125
+            drawy = 375
+        end
+        if i == 3 and PODIUM[i].turns < 999 then
+            drawx = 325
+            drawy = 400
+        end
+        if i == 4 and PODIUM[i].turns < 999 then
+            drawx = 225
+            drawy = 500
+        end
+        if i == 5 and PODIUM[i].turns < 999 then
+            drawx = 225
+            drawy = 550
+        end
+        if i == 6 and PODIUM[i].turns < 999 then
+            drawx = 225
+            drawy = 600
+        end
+
+        --! don't fort DNF
+
+        -- love.graphics.print(txt, drawx + 5, drawy)
+        love.graphics.draw(CARIMAGE[PODIUM[i].car], drawx, drawy)
         drawy = drawy + 35
     end
 
-    drawShopItems()
-    drawCarComponents()
+    -- drawShopItems()
+    -- drawCarComponents()
     drawCareer()
 
     buttons.drawButtons()
@@ -116,18 +149,29 @@ function podium.update()
 
     if not podiumloaded then
         podiumloaded = true
+
+        -- debug. load fake podium
+        PODIUM = {}
+        for i = 1, 6 do
+            local thiswin = {}
+            thiswin.car = i
+            thiswin.turns = love.math.random(15, 24)
+            table.insert(PODIUM, thiswin)
+        end
+        print(inspect((PODIUM)))
+
         table.sort(PODIUM, function(k1, k2)
             return k1.turns < k2.turns
         end)
 
         -- load car configuration
-        car = fun.loadTableFromFile("playercar.dat")
-        if car == nil then
-            print("No car found")
-        else
-            print("Car loaded")
-        end
-        assert(car ~= nil)
+        -- car = fun.loadTableFromFile("playercar.dat")
+        -- if car == nil then
+        --     print("No car found")
+        -- else
+        --     print("Car loaded")
+        -- end
+        -- assert(car ~= nil)
 
         -- load career
         career = fun.loadTableFromFile("career.dat")
@@ -181,6 +225,9 @@ function podium.update()
                 gearitem.highestspeed = love.math.random(29, 31)
             end
         end
+
+
+
     end
 
     if TRAINER_MODE then
