@@ -46,6 +46,8 @@ local function eliminateCar(carindex, isSpun, msg)
         error(43)
     end
 
+    fun.playAudio(enum.audioCrash, false, true)
+
     -- add an oil slick
     local cell = cars[carindex].cell
     oilslick[cell] = true
@@ -708,6 +710,7 @@ local function executeLegalMove(carindex, desiredcell)
                         local txt = "Car #" .. carindex .. " used " .. originalmovesleft .. " tyre points"
                         lovelyToasts.show(txt, 10, "middle")
                         cars[carindex].wptyres = cars[carindex].wptyres - originalmovesleft
+                        fun.playAudio(enum.audioSkid, false, true)
                     elseif cars[carindex].wptyres == originalmovesleft then
                         -- spin becaue overshoot amount == wptyres
                         cars[carindex].wptyres = 0
