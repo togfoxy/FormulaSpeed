@@ -26,6 +26,7 @@ function enums.load()
     enum.imageGoldTrophy = 9
     enum.imageSilverTrophy = 10
     enum.imageBronzeTrophy = 11
+    enum.imageFinish = 12
 
     enum.gamemodeGearSelect = 1
     enum.gamemodeMoveCar = 2
@@ -36,6 +37,9 @@ function enums.load()
     enum.fontLarge = 3
     enum.fontCorporate = 4
     enum.fontalienEncounters48 = 5
+
+    enum.audioMainMenu = 1
+    enum.audioPodium = 2
 
 end
 return enums

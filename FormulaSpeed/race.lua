@@ -23,7 +23,7 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
-local PathThreshold = 50                -- used by 'getPaths' to tune the algorithm workload
+local PathThreshold = 55                -- used by 'getPaths' to tune the algorithm workload
 
 local function eliminateCar(carindex, isSpun, msg)
     -- it has been determined this car needs to be eliminated
@@ -51,28 +51,6 @@ local function eliminateCar(carindex, isSpun, msg)
     oilslick[cell] = true
 end
 
-local function getForwardCornerCells(cell)
-    -- used during editing. Return a table of all the corner cells in front of this one
-    -- including this one
-    --! not yet working
-    local stack = {}
-    table.insert(stack, cell)
-    for k, v in pairs(racetrack[cell].link) do
-        if v == true then       -- k = cell number. v = true/false
-            if racetrack[k].isCorner then
-                -- local thiscell = getForwardCornerCells(k)
-                -- table.insert(stack, getForwardCornerCells(k))
-                local newstack = {}
-                newstack = getForwardCornerCells(k)
-                for q, w in pairs(newstack) do
-                    table.insert(stack, w)
-                end
-            end
-        end
-    end
-    return stack
-end
-
 local function allCarsLeftGrid()
     -- returns true if all cars have crossed the finish line at least once
     for i = 1, numofcars do
@@ -90,9 +68,6 @@ local function getDistanceToFinish(startcell, ignoreFirstFinish)
     -- input: ignoreFirstFinish = set to TRUE when the car is still on the grid and the first crossing of the finish
     --          line needs to be ignored
 	-- NOTE: this function doesn't try to find the shortest path meaning it is not very efficient (or accurate)
-	-- NOTE: gives incorrect results for cars on the grid and not yet crossed the line.        --!
-
-    -- print("Cell #" .. startcell, ignoreFirstFinish)
 
 	local result       -- number
     local nextcell
@@ -367,7 +342,6 @@ local function loadRaceTrack()
 	print("Sum of track knowledge is " .. tksum)
 	print("Average speed is " .. cf.round(tksum / #trackknowledge, 1))
 	-- error()
-    print("#racetrack = " .. #racetrack)
 end
 
 local function loadCars()
@@ -776,45 +750,47 @@ local function executeLegalMove(carindex, desiredcell)
 
     -- check for a finish
     if racetrack[cars[carindex].cell].isFinish and cars[carindex].isOffGrid == true then
-        -- WIN!
-        cars[carindex].hasFinished = true
-        cars[carindex].movesleft = 0
+        if numberofturns > 7 then       -- just a safety because some cars finished early for some reason
+            -- WIN!
+            cars[carindex].hasFinished = true
+            cars[carindex].movesleft = 0
 
-        local thiswin = {}
-        thiswin.car = carindex
-        thiswin.turns = numberofturns
-        table.insert(PODIUM, thiswin)
+            local thiswin = {}
+            thiswin.car = carindex
+            thiswin.turns = numberofturns
+            table.insert(PODIUM, thiswin)
 
-        lovelyToasts.show("Lap time = " .. numberofturns, 10, "middle")
+            lovelyToasts.show("Lap time = " .. numberofturns, 10, "middle")
 
-        -- see if this lap performance should replace the ghost
-        if carindex == 1 then   -- ghost is only for player 1
-            if ghost == nil or numberofturns < #ghost then
-                local success = fileops.saveGhost(history[carindex])
-                print("Ghost save success: " .. tostring(success))
-            end
-        end
-
-        -- update the bot AI
-        -- use the cars log to update the bots knowledge of the race track
-        -- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
-        --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
-        -- these two things gives the bot AI something to strive for when selecting gears
-        for k, v in pairs(cars[carindex].log) do
-            if trackknowledge == nil then trackknowledge = {} end
-            if trackknowledge[k] == nil then trackknowledge[k] = {} end
-            if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
-                if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
-                    -- this log has a faster time than previously recorded
-                    -- update track knowledge with this new information
-                    trackknowledge[k].besttime = numberofturns
-                    trackknowledge[k].moves = v.moves
+            -- see if this lap performance should replace the ghost
+            if carindex == 1 then   -- ghost is only for player 1
+                if ghost == nil or numberofturns < #ghost then
+                    local success = fileops.saveGhost(history[carindex])
+                    print("Ghost save success: " .. tostring(success))
                 end
             end
+
+            -- update the bot AI
+            -- use the cars log to update the bots knowledge of the race track
+            -- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
+            --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
+            -- these two things gives the bot AI something to strive for when selecting gears
+            for k, v in pairs(cars[carindex].log) do
+                if trackknowledge == nil then trackknowledge = {} end
+                if trackknowledge[k] == nil then trackknowledge[k] = {} end
+                if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
+                    if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
+                        -- this log has a faster time than previously recorded
+                        -- update track knowledge with this new information
+                        trackknowledge[k].besttime = numberofturns
+                        trackknowledge[k].moves = v.moves
+                    end
+                end
+            end
+            local success = fileops.saveTrackKnowledge(trackknowledge)
+            print("Knowledge save success: " .. tostring(success))
+            -- print(inspect(trackknowledge))
         end
-        local success = fileops.saveTrackKnowledge(trackknowledge)
-        print("Knowledge save success: " .. tostring(success))
-        -- print(inspect(trackknowledge))
     end
 
     if cars[1].isEliminated or cars[1].hasFinished then
@@ -826,10 +802,63 @@ end
 
 local function botSelectGear(botnumber)
     -- purely random and needs to be improved
-    local rnd = love.math.random(-1, 1)
-    local result = cars[botnumber].gear + rnd
-    if result < 1 then result = 1 end
-    if result > 6 then result = 6 end
+	local result
+	local currentcell = cars[botnumber].cell
+	local preferredspeed
+	local preferredgear
+	local gearshift			-- how much to shift up/down
+
+    if not cars[botnumber].isOffGrid then
+        gearshift = 1       -- shift up
+    else
+    	if trackknowledge[currentcell] ~= nil then
+    		preferredspeed = trackknowledge[currentcell].moves
+    	end
+    	if preferredspeed ~= nil then
+    		-- try to pick a gear that provides the preferred speed
+    		-- this will choose the slowest speed but will do for now
+    		-- each bot has a different risk appetite so will use a slightly different algorithm
+    		if botnumber == 2 then
+    			-- choose the highest gear that contains the desired speed
+    			for i = 6, 1, -1 do
+    				if cars[botnumber].gearbox[i][1] <= preferredspeed and cars[botnumber].gearbox[i][2] >= preferredspeed then
+    					preferredgear = i
+    					break
+    				end
+    			end
+    		elseif botnumber == 3 then
+    			-- choose the gear that doesn't go over preferred speed
+    			for i = 6, 1, -1 do
+    				if cars[botnumber].gearbox[i][2] <= preferredspeed then
+    					preferredgear = i
+    					break
+    				end
+    			end
+    		else
+    			-- a generic default gear selection
+    			for i = 1, 6 do		-- gears
+    				if cars[botnumber].gearbox[i][1] <= preferredspeed and cars[botnumber].gearbox[i][2] >= preferredspeed then
+    					preferredgear = i
+    					break
+    				end
+    			end
+    		end
+    		-- there is a chance the above for loops terminates with no result due to gearbox configuration
+    		if preferredgear ~= nil then
+    			gearshift = preferredgear - cars[botnumber].gear 		-- (preferred - current)
+    			if gearshift > 1 then gearshift = 1 end
+    		end
+    	end
+
+    	if gearshift == nil then	-- pick random gear
+    		gearshift = love.math.random(-1, 1)
+    	end
+    end
+
+	result = cars[botnumber].gear + gearshift
+	if result < 1 then result = 1 end
+	if result > 6 then result = 6 end
+	assert(result ~= nil)
     return result
 end
 
@@ -845,7 +874,7 @@ local function getAllPaths(rootcell, movesneeded, path, allpaths)
                 table.insert(allpaths, temptable)
                 table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
                 if #allpaths >= PathThreshold then
-                    return(allpaths)        --!
+                    return(allpaths)
                 end
             else
                 local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
@@ -923,8 +952,6 @@ local function applyMoves(carindex)
     -- print("About to find the best path")
     path = returnBestPath(carindex)             -- returns the single best path
 
-    -- print("Path length is " .. #path)       --! path length = 0 when it shouldn't be
-
     while path ~= nil and #path > 0 do
         local desiredcell = path[1]
         executeLegalMove(carindex, desiredcell)
@@ -968,7 +995,7 @@ local function applyMoves(carindex)
             tiresused = 99
         end
         if cars[carindex].wpbrakes >= brakesused and cars[carindex].wptyres >= tiresused then
-            lovelyToasts.show(txt, 7, "middle")     --! check if txt is ever nil/empty
+            lovelyToasts.show(txt, 7, "middle")
         else
             txt = "Car #" .. carindex .. " is blocked and crashes out"
             eliminateCar(carindex, false, txt)           -- carindex, isSpun, msg
@@ -1237,17 +1264,6 @@ function race.keyreleased(key, scancode)
                     if racetrack[cell].speedCheck > 3 then
                         racetrack[cell].speedCheck = nil
                     end
-
-                    -- -- map all corner cells in front of this cell as a speedcheck
-                    --! not yet working. Stack overflow
-                    -- if racetrack[cell].isCorner then
-                    --     local cornercells = {}
-                    --     local newvalue = racetrack[cell].speedCheck
-                    --     cornercells = getForwardCornerCells(cell)
-                    --     for k, v in pairs(cornercells) do
-                    --     	racetrack[v].speedCheck = newvalue
-                    --     end
-                    -- end
                 end
             end
         end
@@ -1533,7 +1549,7 @@ function race.draw()
 
                 love.graphics.setColor(1,1,1,1)     -- white
                 if racetrack[cars[1].cell].isCorner then
-                    --! make the move left counter change colours here
+                    -- make the move left counter change colours here
                     if cars[1].brakestaken >= racetrack[cars[1].cell].speedCheck then
                         love.graphics.setColor(0,1,0,1)
                     else
@@ -1698,12 +1714,11 @@ end
 
 function race.update(dt)
 
-print(#racetrack)
     if #racetrack == 0 then
         currentplayer = 1
         oilslick = {}
         numberofturns = 0
-        
+
         loadRaceTrack()
         loadCars()
         loadGearStick()

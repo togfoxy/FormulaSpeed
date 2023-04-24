@@ -12,6 +12,7 @@ function functions.loadImages()
     IMAGE[enum.imageGoldTrophy] = love.graphics.newImage("assets/images/trophy-gold.png")
     IMAGE[enum.imageSilverTrophy] = love.graphics.newImage("assets/images/trophy-silver.png")
     IMAGE[enum.imageBronzeTrophy] = love.graphics.newImage("assets/images/trophy-bronze.png")
+    IMAGE[enum.imageFinish] = love.graphics.newImage("assets/images/finish.jpg")
 
     CARIMAGE[1] = love.graphics.newImage("assets/images/car1_64x29.png")
 	CARIMAGE[2] = love.graphics.newImage("assets/images/car2_64x29.png")
@@ -30,6 +31,23 @@ function functions.loadFonts()
     FONT[enum.fontalienEncounters48] = love.graphics.newFont("assets/fonts/aliee13.ttf", 48)
 
     love.graphics.setFont(FONT[enum.fontDefault])
+end
+
+function functions.loadAudio()
+
+    AUDIO[enum.audioMainMenu] = love.audio.newSource("assets/audio/Short Action Game Loop #2.mp3", "stream")
+    AUDIO[enum.audioPodium] = love.audio.newSource("assets/audio/Triumphant Loop #2.mp3", "stream")
+
+end
+
+function functions.playAudio(audionumber, isMusic, isSound)
+    if isMusic and MUSIC_TOGGLE then
+        AUDIO[audionumber]:play()
+    end
+    if isSound and SOUND_TOGGLE then
+        AUDIO[audionumber]:play()
+    end
+    -- print("playing music/sound #" .. audionumber)
 end
 
 function functions.loadTableFromFile(datfilename)
