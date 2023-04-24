@@ -23,7 +23,7 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
-local PathThreshold = 50                -- used by 'getPaths' to tune the algorithm workload
+local PathThreshold = 55                -- used by 'getPaths' to tune the algorithm workload
 
 local function eliminateCar(carindex, isSpun, msg)
     -- it has been determined this car needs to be eliminated
@@ -775,45 +775,47 @@ local function executeLegalMove(carindex, desiredcell)
 
     -- check for a finish
     if racetrack[cars[carindex].cell].isFinish and cars[carindex].isOffGrid == true then
-        -- WIN!
-        cars[carindex].hasFinished = true
-        cars[carindex].movesleft = 0
+        if numberofturns > 7 then       -- just a safety because some cars finished early for some reason
+            -- WIN!
+            cars[carindex].hasFinished = true
+            cars[carindex].movesleft = 0
 
-        local thiswin = {}
-        thiswin.car = carindex
-        thiswin.turns = numberofturns
-        table.insert(PODIUM, thiswin)
+            local thiswin = {}
+            thiswin.car = carindex
+            thiswin.turns = numberofturns
+            table.insert(PODIUM, thiswin)
 
-        lovelyToasts.show("Lap time = " .. numberofturns, 10, "middle")
+            lovelyToasts.show("Lap time = " .. numberofturns, 10, "middle")
 
-        -- see if this lap performance should replace the ghost
-        if carindex == 1 then   -- ghost is only for player 1
-            if ghost == nil or numberofturns < #ghost then
-                local success = fileops.saveGhost(history[carindex])
-                print("Ghost save success: " .. tostring(success))
-            end
-        end
-
-        -- update the bot AI
-        -- use the cars log to update the bots knowledge of the race track
-        -- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
-        --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
-        -- these two things gives the bot AI something to strive for when selecting gears
-        for k, v in pairs(cars[carindex].log) do
-            if trackknowledge == nil then trackknowledge = {} end
-            if trackknowledge[k] == nil then trackknowledge[k] = {} end
-            if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
-                if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
-                    -- this log has a faster time than previously recorded
-                    -- update track knowledge with this new information
-                    trackknowledge[k].besttime = numberofturns
-                    trackknowledge[k].moves = v.moves
+            -- see if this lap performance should replace the ghost
+            if carindex == 1 then   -- ghost is only for player 1
+                if ghost == nil or numberofturns < #ghost then
+                    local success = fileops.saveGhost(history[carindex])
+                    print("Ghost save success: " .. tostring(success))
                 end
             end
+
+            -- update the bot AI
+            -- use the cars log to update the bots knowledge of the race track
+            -- example: trackknowledge[23].besttime	= the best recorded time for any car using cell 23
+            --          trackknowledge[23].moves = the speed of the car that achieved the best time (see above)
+            -- these two things gives the bot AI something to strive for when selecting gears
+            for k, v in pairs(cars[carindex].log) do
+                if trackknowledge == nil then trackknowledge = {} end
+                if trackknowledge[k] == nil then trackknowledge[k] = {} end
+                if trackknowledge[k].besttime == nil or trackknowledge[k].besttime > numberofturns then
+                    if v.moves > 0 then -- 0 is a legit value but offers no value to an AI
+                        -- this log has a faster time than previously recorded
+                        -- update track knowledge with this new information
+                        trackknowledge[k].besttime = numberofturns
+                        trackknowledge[k].moves = v.moves
+                    end
+                end
+            end
+            local success = fileops.saveTrackKnowledge(trackknowledge)
+            print("Knowledge save success: " .. tostring(success))
+            -- print(inspect(trackknowledge))
         end
-        local success = fileops.saveTrackKnowledge(trackknowledge)
-        print("Knowledge save success: " .. tostring(success))
-        -- print(inspect(trackknowledge))
     end
 
     if cars[1].isEliminated or cars[1].hasFinished then
@@ -825,10 +827,63 @@ end
 
 local function botSelectGear(botnumber)
     -- purely random and needs to be improved
-    local rnd = love.math.random(-1, 1)
-    local result = cars[botnumber].gear + rnd
-    if result < 1 then result = 1 end
-    if result > 6 then result = 6 end
+	local result
+	local currentcell = cars[botnumber].cell
+	local preferredspeed
+	local preferredgear
+	local gearshift			-- how much to shift up/down
+
+    if not cars[botnumber].isOffGrid then
+        gearshift = 1       -- shift up
+    else
+    	if trackknowledge[currentcell] ~= nil then
+    		preferredspeed = trackknowledge[currentcell].moves
+    	end
+    	if preferredspeed ~= nil then
+    		-- try to pick a gear that provides the preferred speed
+    		-- this will choose the slowest speed but will do for now
+    		-- each bot has a different risk appetite so will use a slightly different algorithm
+    		if botnumber == 2 then
+    			-- choose the highest gear that contains the desired speed
+    			for i = 6, 1, -1 do
+    				if cars[botnumber].gearbox[i][1] <= preferredspeed and cars[botnumber].gearbox[i][2] >= preferredspeed then
+    					preferredgear = i
+    					break
+    				end
+    			end
+    		elseif botnumber == 3 then
+    			-- choose the gear that doesn't go over preferred speed
+    			for i = 6, 1, -1 do
+    				if cars[botnumber].gearbox[i][2] <= preferredspeed then
+    					preferredgear = i
+    					break
+    				end
+    			end
+    		else
+    			-- a generic default gear selection
+    			for i = 1, 6 do		-- gears
+    				if cars[botnumber].gearbox[i][1] <= preferredspeed and cars[botnumber].gearbox[i][2] >= preferredspeed then
+    					preferredgear = i
+    					break
+    				end
+    			end
+    		end
+    		-- there is a chance the above for loops terminates with no result due to gearbox configuration
+    		if preferredgear ~= nil then
+    			gearshift = preferredgear - cars[botnumber].gear 		-- (preferred - current)
+    			if gearshift > 1 then gearshift = 1 end
+    		end
+    	end
+
+    	if gearshift == nil then	-- pick random gear
+    		gearshift = love.math.random(-1, 1)
+    	end
+    end
+
+	result = cars[botnumber].gear + gearshift
+	if result < 1 then result = 1 end
+	if result > 6 then result = 6 end
+	assert(result ~= nil)
     return result
 end
 
