@@ -620,6 +620,7 @@ local function executeLegalMove(carindex, desiredcell)
     cars[carindex].cell = desiredcell
     cars[carindex].movesleft = cars[carindex].movesleft - 1
     cars[carindex].isSpun = false       -- the act of moving causes unspin
+    fun.playAudio(enum.audioClick, false, true)
 
     -- check if car is moving off grid
     if racetrack[originalcell].isFinish ~= nil and racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then

@@ -39,6 +39,7 @@ function functions.loadAudio()
     AUDIO[enum.audioPodium] = love.audio.newSource("assets/audio/Triumphant Loop #2.mp3", "stream")
     AUDIO[enum.audioSkid] = love.audio.newSource("assets/audio/tires_squal_loop1.mp3", "static")
     AUDIO[enum.audioCrash] = love.audio.newSource("assets/audio/237375__squareal__car-crash_1.mp3", "static")
+    AUDIO[enum.audioClick] = love.audio.newSource("assets/audio/click.wav", "static")
 end
 
 function functions.playAudio(audionumber, isMusic, isSound)
