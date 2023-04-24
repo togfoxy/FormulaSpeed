@@ -7,7 +7,7 @@ local numofcars = 6
 local celllength = 128
 local cellwidth = 64
 
-local sidebarwidth = 250
+local sidebarwidth = 275
 
 local gearstick = {}            -- made this a table so I can do graphics stuff
 
@@ -23,7 +23,7 @@ local diceroll = nil                    -- this is the number of moves allocated
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
 
-local PathThreshold = 55                -- used by 'getPaths' to tune the algorithm workload
+local PathThreshold = 60                -- used by 'getPaths' to tune the algorithm workload
 
 local function eliminateCar(carindex, isSpun, msg)
     -- it has been determined this car needs to be eliminated
@@ -1141,38 +1141,50 @@ local function drawKnowledge()
 end
 
 local function drawSidebar()
+
+    love.graphics.setFont(FONT[enum.fontCorporate])
+
+    -- draw shadow box
     local drawx = SCREEN_WIDTH - sidebarwidth
     love.graphics.setColor(0, 0, 0, 0.75)
     love.graphics.rectangle("fill", drawx, 0, sidebarwidth, SCREEN_HEIGHT)
 
-    drawx = drawx + 10
-    drawy = 75
-
     love.graphics.setColor(1,1,1,1)
-
-    love.graphics.print("Turns: " .. numberofturns, drawx, drawy)
+    drawx = drawx + 10
+    drawy = 275
+    love.graphics.print("Turns:", drawx, drawy)
+    love.graphics.print(numberofturns, drawx + 225, drawy)
     drawy = drawy + 35
 
-    love.graphics.print("Player #" .. currentplayer, drawx, drawy)
+    love.graphics.print("Stops in corner:", drawx, drawy)
+    love.graphics.print(cars[currentplayer].brakestaken, drawx + 225, drawy)
     drawy = drawy + 35
-    love.graphics.print("Gear: " .. cars[currentplayer].gear, drawx, drawy)
+    love.graphics.print("Tyre wear points: ", drawx, drawy)
+    love.graphics.print(cars[currentplayer].wptyres, drawx + 225, drawy)
     drawy = drawy + 35
-    love.graphics.print("Moves left: " .. cars[currentplayer].movesleft, drawx, drawy)
+
+    love.graphics.print("Brake wear points: ", drawx, drawy)
+    love.graphics.print(cars[currentplayer].wpbrakes, drawx  + 225, drawy)
     drawy = drawy + 35
-    love.graphics.print("Stops in corner: " .. cars[currentplayer].brakestaken, drawx, drawy)
+
+    love.graphics.print("Gearbox wear points: ", drawx, drawy)
+    love.graphics.print(cars[currentplayer].wpgearbox, drawx + 225, drawy)
     drawy = drawy + 35
-    love.graphics.print("Tyre wear points: " .. cars[currentplayer].wptyres, drawx, drawy)
+
+    love.graphics.print("Engine wear points: ", drawx, drawy)
+    love.graphics.print(cars[currentplayer].wpengine, drawx + 225, drawy)
     drawy = drawy + 35
-    love.graphics.print("Brake wear points: " .. cars[currentplayer].wpbrakes, drawx, drawy)
+
+    love.graphics.print("Handling wear points: ", drawx, drawy)
+    love.graphics.print(cars[currentplayer].wphandling, drawx + 225, drawy)
     drawy = drawy + 35
-    love.graphics.print("Gearbox wear points: " .. cars[currentplayer].wpgearbox, drawx, drawy)
+
+    love.graphics.print("Body wear points: ", drawx, drawy)
+    love.graphics.print(cars[currentplayer].wpbody, drawx + 225, drawy)
     drawy = drawy + 35
-    love.graphics.print("Engine wear points: " .. cars[currentplayer].wpengine, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Handling wear points: " .. cars[currentplayer].wphandling, drawx, drawy)
-    drawy = drawy + 35
-    love.graphics.print("Body wear points: " .. cars[currentplayer].wpbody, drawx, drawy)
-    drawy = drawy + 35
+
+
+    love.graphics.setFont(FONT[enum.fontDefault])
 end
 
 function race.keypressed( key, scancode, isrepeat )
@@ -1770,7 +1782,7 @@ function race.loadButtons()
     -- button for brake
     local mybutton = {}
     local buttonsequence = 1            -- sequence on the screen
-    mybutton.x = SCREEN_WIDTH - 185
+    mybutton.x = SCREEN_WIDTH - 205
     mybutton.y = SCREEN_HEIGHT - 275
     mybutton.width = 110               -- use this to define click zone on images
     mybutton.height = 35
