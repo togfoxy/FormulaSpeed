@@ -116,9 +116,9 @@ function love.load()
 
 	love.window.setTitle("Speed " .. GAME_VERSION)
 
-	-- cf.addScreen(enum.sceneMainMenu, SCREEN_STACK)
+	cf.addScreen(enum.sceneMainMenu, SCREEN_STACK)
     -- cf.addScreen(enum.sceneRace, SCREEN_STACK)
-	cf.addScreen(enum.scenePodium, SCREEN_STACK)
+	-- cf.addScreen(enum.scenePodium, SCREEN_STACK)
 
 	love.keyboard.setKeyRepeat(true)
 

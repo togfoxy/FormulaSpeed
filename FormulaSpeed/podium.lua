@@ -40,18 +40,38 @@ local function drawShopItems()
 end
 
 local function drawCareer()
-    local drawx = 600
-    local drawy = 300
+    local drawx = 650
+    local drawy = 100
 
     love.graphics.setColor(1,1,1,1)
-    love.graphics.print("Career stats", drawx, drawy)
-    drawy = drawy + 50
+    love.graphics.setFont(FONT[enum.fontalienEncounters48])
+    love.graphics.print("Career statistics", drawx, drawy, 0 , 1, 1)
+    love.graphics.setFont(FONT[enum.fontDefault])
+
+    love.graphics.setFont(FONT[enum.fontCorporate])
+    local drawx = 650
+    local drawy = 200
+    love.graphics.print("Placings", drawx + 100, drawy)
+
+    drawy = drawy + 40
     for i = 1, #career do
         if career[i] ~= nil then
-            love.graphics.print(i .. ": " .. career[i], drawx, drawy)
+            if i == 1 then
+                txt = "1st place: "
+            elseif i == 2 then
+                txt = "2nd place: "
+            elseif i == 3 then
+                txt = "3rd place: "
+            else
+                txt = i .. "th place: "
+            end
+
+            love.graphics.print(txt, drawx, drawy)
+            love.graphics.print(career[i], drawx + 130, drawy)
             drawy = drawy + 50
         end
     end
+    love.graphics.setFont(FONT[enum.fontDefault])
 
 end
 
@@ -93,6 +113,7 @@ end
 
 function podium.draw()
 
+    local alpha
     -- draw trophy
     love.graphics.setColor(1,1,1,1)
     love.graphics.draw(IMAGE[enum.imageGoldTrophy], 200, 200)
@@ -109,33 +130,44 @@ function podium.draw()
         if i == 1 and PODIUM[i].turns < 999 then
             drawx = 225
             drawy = 325
+            alpha = 1
         end
         if i == 2 and PODIUM[i].turns < 999 then
             drawx = 125
             drawy = 375
+            alpha = 1
         end
         if i == 3 and PODIUM[i].turns < 999 then
             drawx = 325
             drawy = 400
+            alpha = 1
         end
         if i == 4 and PODIUM[i].turns < 999 then
             drawx = 225
             drawy = 500
+            alpha = 1
         end
         if i == 5 and PODIUM[i].turns < 999 then
             drawx = 225
             drawy = 550
+            alpha = 1
         end
         if i == 6 and PODIUM[i].turns < 999 then
             drawx = 225
             drawy = 600
+            alpha = 1
+        end
+        if PODIUM[i].turns == 999 then
+            drawx = 225
+            drawy = drawy + 40
+            alpha = 0.5
         end
 
-        --! don't fort DNF
+        --! don't forget DNF
 
-        -- love.graphics.print(txt, drawx + 5, drawy)
+        love.graphics.setColor(1,1,1,alpha)
         love.graphics.draw(CARIMAGE[PODIUM[i].car], drawx, drawy)
-        drawy = drawy + 35
+
     end
 
     -- drawShopItems()
@@ -155,23 +187,29 @@ function podium.update()
         for i = 1, 6 do
             local thiswin = {}
             thiswin.car = i
-            thiswin.turns = love.math.random(15, 24)
+            if love.math.random(1, 2) == 1 then
+                thiswin.turns = 999
+            else
+                thiswin.turns = love.math.random(15, 24)
+            end
             table.insert(PODIUM, thiswin)
         end
-        print(inspect((PODIUM)))
+
 
         table.sort(PODIUM, function(k1, k2)
             return k1.turns < k2.turns
         end)
 
+        print(inspect((PODIUM)))
+
         -- load car configuration
-        -- car = fun.loadTableFromFile("playercar.dat")
-        -- if car == nil then
-        --     print("No car found")
-        -- else
-        --     print("Car loaded")
-        -- end
-        -- assert(car ~= nil)
+        car = fun.loadTableFromFile("playercar.dat")
+        if car == nil then
+            print("No car found")
+        else
+            print("Car loaded")
+        end
+        assert(car ~= nil)
 
         -- load career
         career = fun.loadTableFromFile("career.dat")
