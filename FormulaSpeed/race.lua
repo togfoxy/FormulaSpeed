@@ -635,7 +635,7 @@ local function executeLegalMove(carindex, desiredcell)
                 -- eliminated
                 local txt = "Car #" .. carindex .. " has lost road handling and is eliminated"
                 eliminateCar(carindex, true, txt)
-
+                fun.playAudio(enum.audioSkid, false, true)
             end
         end
     end
@@ -673,6 +673,7 @@ local function executeLegalMove(carindex, desiredcell)
                             if cars[i].wpengine < 1 then
                                 local txt = "Car #" .. carindex .. " has blown an engine and is eliminated"
                                 eliminateCar(carindex, true, txt)
+                                fun.playAudio(enum.audioSkid, false, true)
                             else
                                 local txt = "Car #" .. carindex .. " has suffers engine damage"
                                 lovelyToasts.show(txt, 10, "middle")
@@ -696,6 +697,7 @@ local function executeLegalMove(carindex, desiredcell)
                 -- elimination
                 local txt = "Car #" .. carindex .. " ignored yellow flag and is eliminated"
                 eliminateCar(carindex, true, txt)
+                fun.playAudio(enum.audioSkid, false, true)
             else        -- brakescore == 1
                 -- see how many cells was overshot
                 -- some complex rules about spinning etc
@@ -714,10 +716,12 @@ local function executeLegalMove(carindex, desiredcell)
                         cars[carindex].movesleft = 0
                         local txt = "Car #" .. carindex .. " has no tyre points left. Car has spun"
                         lovelyToasts.show(txt, 10, "middle")
+                        fun.playAudio(enum.audioSkid, false, true )
                     elseif originalmovesleft > cars[carindex].wptyres then
                         -- crash out
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is greater than tyre wear points")
                         eliminateCar(carindex, true, txt)
+                        fun.playAudio(enum.audioSkid, false, true)
                     end
                 elseif cars[carindex].wptyres == 0 then
                     -- special rules when wptyres == 0
@@ -725,6 +729,7 @@ local function executeLegalMove(carindex, desiredcell)
                         cars[carindex].isSpun = true
                         cars[carindex].gear = 0
                         cars[carindex].movesleft = 0
+                        fun.playAudio(enum.audioSkid, false, true )
                         if originalmovesleft > 1 then
                             -- crash out
                             txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is > 1 while out of tyre wear points")
@@ -737,6 +742,7 @@ local function executeLegalMove(carindex, desiredcell)
                         -- crash
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount > 1 while out of tyre wear points")
                         eliminateCar(carindex, true, txt)
+                        fun.playAudio(enum.audioSkid, false, true)
                     else
                         error("Oops. Unexpected code executed", 620)
                     end

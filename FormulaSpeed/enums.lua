@@ -40,6 +40,7 @@ function enums.load()
 
     enum.audioMainMenu = 1
     enum.audioPodium = 2
+    enum.audioSkid = 3
 
 end
 return enums
