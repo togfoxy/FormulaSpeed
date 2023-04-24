@@ -8,7 +8,7 @@ function mainmenu.mousereleased(rx, ry, x, y, button)
     if clickedButtonID == enum.buttonMainMenuRestartCareer then
         result = fun.deleteFile("career.dat")
         result = fun.deleteFile("ghost.dat")
-        result = fun.deleteFile("playercar.dat")
+        -- result = fun.deleteFile("playercar.dat")
         cf.addScreen(enum.sceneRace, SCREEN_STACK)
     elseif clickedButtonID == enum.buttonMainMenuContinue then
         cf.addScreen(enum.sceneRace, SCREEN_STACK)

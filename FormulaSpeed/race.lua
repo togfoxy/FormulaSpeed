@@ -161,7 +161,7 @@ local function incCurrentPlayer()
         cf.swapScreen(enum.scenePodium, SCREEN_STACK)   -- note: doing this doesn't stop the rest of the below code executing
         print("All cars finished or eliminated")
         currentplayer = 0
-        PLAYERCAR = cf.deepcopy(cars[1])
+        -- PLAYERCAR = cf.deepcopy(cars[1])
     end
 
     -- custom sort the table of cars that are still in play
@@ -367,18 +367,18 @@ local function loadRaceTrack()
 	print("Sum of track knowledge is " .. tksum)
 	print("Average speed is " .. cf.round(tksum / #trackknowledge, 1))
 	-- error()
+    print("#racetrack = " .. #racetrack)
 end
 
 local function loadCars()
 
-    local carLoaded = false
-    local car = fun.loadTableFromFile("playercar.dat")
-    if car == nil then
-        print("No car found")
-    else
-        print("Car loaded")
-        carLoaded = true
-    end
+    -- local car = fun.loadTableFromFile("playercar.dat")
+    -- if car == nil then
+    --     print("No car found")
+    -- else
+    --     print("Car loaded")
+    --     carLoaded = true
+    -- end
 
     for i = 1, numofcars do
         cars[i] = {}
@@ -427,67 +427,67 @@ local function loadCars()
         cars[i].isOffGrid = false               -- set to true on first corner to see if car has moved off grid
         cars[i].hasFinished = false             -- has finished the race
 
-        if carLoaded and i == 1 then
-            cars[1].wptyres = car.wptyresmax
-            cars[1].wpbrakes = car.wpbrakesmax
-            cars[1].wpgearbox = car.wpgearboxmax
-            cars[1].wpbody = car.wpbodymax
-            cars[1].wpengine = car.wpenginemax
-            cars[1].wphandling = car.wphandlingmax
-
-            cars[1].wptyresmax = car.wptyresmax
-            cars[1].wpbrakesmax = car.wpbrakesmax
-            cars[1].wpgearboxmax = car.wpgearboxmax
-            cars[1].wpbodymax = car.wpbodymax
-            cars[1].wpenginemax = car.wpenginemax
-            cars[1].wphandlingmax = car.wphandlingmax
-
-            -- gearbox
-            cars[1].gearbox = {}
-            cars[1].gearbox[1] = {}
-            cars[1].gearbox[1][1] = car.gearboxsettings[1][1]
-            cars[1].gearbox[1][2] = car.gearboxsettings[1][2]
-
-            cars[1].gearbox[2] = {}
-            cars[1].gearbox[2][1] = car.gearboxsettings[2][1]
-            cars[1].gearbox[2][2] = car.gearboxsettings[2][2]
-
-            cars[1].gearbox[3] = {}
-            cars[1].gearbox[3][1] = car.gearboxsettings[3][1]
-            cars[1].gearbox[3][2] = car.gearboxsettings[3][2]
-
-            cars[1].gearbox[4] = {}
-            cars[1].gearbox[4][1] = car.gearboxsettings[4][1]
-            cars[1].gearbox[4][2] = car.gearboxsettings[4][2]
-
-            cars[1].gearbox[5] = {}
-            cars[1].gearbox[5][1] = car.gearboxsettings[5][1]
-            cars[1].gearbox[5][2] = car.gearboxsettings[5][2]
-
-            cars[1].gearbox[6] = {}
-            cars[1].gearbox[6][1] = car.gearboxsettings[6][1]
-            cars[1].gearbox[6][2] = car.gearboxsettings[6][2]
-
-            cars[1].gearboxsettings = {}
-            cars[1].gearboxsettings[1] = {}
-            cars[1].gearboxsettings[1][1] = car.gearboxsettings[1][1]
-            cars[1].gearboxsettings[1][2] = car.gearboxsettings[1][2]
-            cars[1].gearboxsettings[2] = {}
-            cars[1].gearboxsettings[2][1] = car.gearboxsettings[2][1]
-            cars[1].gearboxsettings[2][2] = car.gearboxsettings[2][2]
-            cars[1].gearboxsettings[3] = {}
-            cars[1].gearboxsettings[3][1] = car.gearboxsettings[3][1]
-            cars[1].gearboxsettings[3][2] = car.gearboxsettings[3][1]
-            cars[1].gearboxsettings[4] = {}
-            cars[1].gearboxsettings[4][1] = car.gearboxsettings[4][1]
-            cars[1].gearboxsettings[4][2] = car.gearboxsettings[4][2]
-            cars[1].gearboxsettings[5] = {}
-            cars[1].gearboxsettings[5][1] = car.gearboxsettings[5][1]
-            cars[1].gearboxsettings[5][2] = car.gearboxsettings[5][2]
-            cars[1].gearboxsettings[6] = {}
-            cars[1].gearboxsettings[6][1] = car.gearboxsettings[6][1]
-            cars[1].gearboxsettings[6][2] = car.gearboxsettings[6][2]
-        else
+        -- if carLoaded and i == 1 then
+            -- cars[1].wptyres = car.wptyresmax
+            -- cars[1].wpbrakes = car.wpbrakesmax
+            -- cars[1].wpgearbox = car.wpgearboxmax
+            -- cars[1].wpbody = car.wpbodymax
+            -- cars[1].wpengine = car.wpenginemax
+            -- cars[1].wphandling = car.wphandlingmax
+            --
+            -- cars[1].wptyresmax = car.wptyresmax
+            -- cars[1].wpbrakesmax = car.wpbrakesmax
+            -- cars[1].wpgearboxmax = car.wpgearboxmax
+            -- cars[1].wpbodymax = car.wpbodymax
+            -- cars[1].wpenginemax = car.wpenginemax
+            -- cars[1].wphandlingmax = car.wphandlingmax
+            --
+            -- -- gearbox
+            -- cars[1].gearbox = {}
+            -- cars[1].gearbox[1] = {}
+            -- cars[1].gearbox[1][1] = car.gearboxsettings[1][1]
+            -- cars[1].gearbox[1][2] = car.gearboxsettings[1][2]
+            --
+            -- cars[1].gearbox[2] = {}
+            -- cars[1].gearbox[2][1] = car.gearboxsettings[2][1]
+            -- cars[1].gearbox[2][2] = car.gearboxsettings[2][2]
+            --
+            -- cars[1].gearbox[3] = {}
+            -- cars[1].gearbox[3][1] = car.gearboxsettings[3][1]
+            -- cars[1].gearbox[3][2] = car.gearboxsettings[3][2]
+            --
+            -- cars[1].gearbox[4] = {}
+            -- cars[1].gearbox[4][1] = car.gearboxsettings[4][1]
+            -- cars[1].gearbox[4][2] = car.gearboxsettings[4][2]
+            --
+            -- cars[1].gearbox[5] = {}
+            -- cars[1].gearbox[5][1] = car.gearboxsettings[5][1]
+            -- cars[1].gearbox[5][2] = car.gearboxsettings[5][2]
+            --
+            -- cars[1].gearbox[6] = {}
+            -- cars[1].gearbox[6][1] = car.gearboxsettings[6][1]
+            -- cars[1].gearbox[6][2] = car.gearboxsettings[6][2]
+            --
+            -- cars[1].gearboxsettings = {}
+            -- cars[1].gearboxsettings[1] = {}
+            -- cars[1].gearboxsettings[1][1] = car.gearboxsettings[1][1]
+            -- cars[1].gearboxsettings[1][2] = car.gearboxsettings[1][2]
+            -- cars[1].gearboxsettings[2] = {}
+            -- cars[1].gearboxsettings[2][1] = car.gearboxsettings[2][1]
+            -- cars[1].gearboxsettings[2][2] = car.gearboxsettings[2][2]
+            -- cars[1].gearboxsettings[3] = {}
+            -- cars[1].gearboxsettings[3][1] = car.gearboxsettings[3][1]
+            -- cars[1].gearboxsettings[3][2] = car.gearboxsettings[3][1]
+            -- cars[1].gearboxsettings[4] = {}
+            -- cars[1].gearboxsettings[4][1] = car.gearboxsettings[4][1]
+            -- cars[1].gearboxsettings[4][2] = car.gearboxsettings[4][2]
+            -- cars[1].gearboxsettings[5] = {}
+            -- cars[1].gearboxsettings[5][1] = car.gearboxsettings[5][1]
+            -- cars[1].gearboxsettings[5][2] = car.gearboxsettings[5][2]
+            -- cars[1].gearboxsettings[6] = {}
+            -- cars[1].gearboxsettings[6][1] = car.gearboxsettings[6][1]
+            -- cars[1].gearboxsettings[6][2] = car.gearboxsettings[6][2]
+        -- else
             cars[i].wptyres = 6
             cars[i].wptyresmax = 6
             cars[i].wpbrakes = 3
@@ -545,13 +545,16 @@ local function loadCars()
             cars[i].gearboxsettings[6] = {}
             cars[i].gearboxsettings[6][1] = 21
             cars[i].gearboxsettings[6][2] = 30
-        end
+        -- end
     end
 
-    fun.saveTableToFile("playercar.dat", cars[1])
+    -- fun.saveTableToFile("playercar.dat", cars[1])
 
     -- load the ghost history, if there is one
     ghost = fileops.loadGhost()
+    if ghost ~= nil then
+        print("Ghost loaded")
+    end
 
     if TRAINER_MODE then
         cars[1].isEliminated = true
@@ -1174,6 +1177,15 @@ function race.keyreleased(key, scancode)
         unselectAllCells()
     end
 
+    if not EDIT_MODE and key == "c" then
+        -- cheat
+        cars[1].cell = 444
+        numberofturns = 998
+        for i = 2, numofcars do
+            eliminateCar(i, false, "")
+        end
+    end
+
     if EDIT_MODE then
         local x, y = love.mouse.getPosition()
         local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
@@ -1686,7 +1698,12 @@ end
 
 function race.update(dt)
 
+print(#racetrack)
     if #racetrack == 0 then
+        currentplayer = 1
+        oilslick = {}
+        numberofturns = 0
+        
         loadRaceTrack()
         loadCars()
         loadGearStick()
