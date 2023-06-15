@@ -63,23 +63,63 @@ local function allCarsLeftGrid()
     return true
 end
 
+local function getDistanceToNextCorner(startcell)
+    -- startcell is a number/index
+    -- will return an odd result if startcell is a corner
+
+    local result = 0
+    local nextcell
+    local currentcell = startcell
+    local currentlane = racetrack[startcell].laneNumber
+    for linkedcellnumber, link in pairs(racetrack[currentcell].link) do
+        if link == true then        -- link is active
+            local candidatecellindex = linkedcellnumber
+            if racetrack[candidatecellindex].laneNumber == currentlane then
+                nextcell = candidatecellindex        -- number/index
+                result = 1
+                break               -- just need the next cell in this lane
+            end
+        end
+    end
+    --! should check for nextcell == nil
+    if nextcell == nil or result == nil then
+        -- oops - something has gone wrong
+        print(currentcell)
+        print(nextcell)
+        print(inspect(racetrack[currentcell]))
+        print(inspect(racetrack[nextcell]))
+        error()
+    end
+
+    -- see if nextcell is a corner
+    local dist, thenextcell
+    if racetrack[nextcell].isCorner then
+        return result, nextcell         -- nextcell = the index of the cell that is the corner
+    else
+        dist, thenextcell = getDistanceToNextCorner(nextcell)
+        result = result + dist
+    end
+    return result, thenextcell
+end
+
 local function getDistanceToFinish(startcell, ignoreFirstFinish)
 	-- count the number of cells between the provided cell and the finish line
 	-- does NOT check for a clear path. Just measures raw distance
-    -- input: startcell = starting cell
+    -- input: startcell = starting cell (number/index)
     -- input: ignoreFirstFinish = set to TRUE when the car is still on the grid and the first crossing of the finish
     --          line needs to be ignored
 	-- NOTE: this function doesn't try to find the shortest path meaning it is not very efficient (or accurate)
 
 	local result       -- number
     local nextcell
-	currentcell = startcell
+	local currentcell = startcell
     for k, v in pairs(racetrack[currentcell].link) do
         if v == true then       -- only count active links
             nextcell = k
             break       -- just need the first link
         end
     end
+    --! should check for nextcell == nil
 
     -- check to see if finish line is crossed
     if racetrack[currentcell].isFinish and not racetrack[nextcell].isFinish then
@@ -1478,7 +1518,7 @@ end
 function race.mousepressed(x, y, button, istouch)
     local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
     local cell = getClosestCell(camx, camy)
-    unselectAllCells()
+    if button == 1 or button == 2 then unselectAllCells() end
     if cell ~= nil then
         racetrack[cell].isSelected = true
     end
@@ -1536,7 +1576,7 @@ function race.draw()
                 love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
             end
         end
-    elseif love.keyboard.isDown("p") then
+    elseif love.keyboard.isDown("p") and not EDIT_MODE then
         -- draw the lane map
         for k, cell in pairs(racetrack) do
             if cell.x ~= nil then
@@ -1625,9 +1665,21 @@ function race.draw()
             end
         end
 
-        -- draw any track knowledge known to the bots
-        if love.keyboard.isDown("k") then       --! this seems to be duplicated code
-            drawKnowledge()
+        -- draw the 'speed' required to reach the next corner
+        if currentplayer == 1 then
+            if racetrack[cars[1].cell].isCorner then
+                -- do nothing
+            else
+                -- get distance to next corner,assuming same lane
+                local distance, cornercell = getDistanceToNextCorner(cars[1].cell)
+                drawx = racetrack[cornercell].x
+                drawy = racetrack[cornercell].y
+
+                love.graphics.setColor(1,1,1,1)
+                love.graphics.draw(IMAGE[enum.imageSpeedSign], drawx, drawy, 0 , 1, 1, 20, 20)
+                love.graphics.setColor(1,0,0,1)
+                love.graphics.print(distance, drawx, drawy, 0, 1.25, 1.25, 3, 5)
+            end
         end
     end
 

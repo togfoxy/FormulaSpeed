@@ -27,6 +27,7 @@ function enums.load()
     enum.imageSilverTrophy = 10
     enum.imageBronzeTrophy = 11
     enum.imageFinish = 12
+    enum.imageSpeedSign = 13
 
     enum.gamemodeGearSelect = 1
     enum.gamemodeMoveCar = 2

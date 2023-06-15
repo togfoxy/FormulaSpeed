@@ -13,6 +13,7 @@ function functions.loadImages()
     IMAGE[enum.imageSilverTrophy] = love.graphics.newImage("assets/images/trophy-silver.png")
     IMAGE[enum.imageBronzeTrophy] = love.graphics.newImage("assets/images/trophy-bronze.png")
     IMAGE[enum.imageFinish] = love.graphics.newImage("assets/images/finish.jpg")
+    IMAGE[enum.imageSpeedSign] = love.graphics.newImage("assets/images/speedsign.png")
 
     CARIMAGE[1] = love.graphics.newImage("assets/images/car1_64x29.png")
 	CARIMAGE[2] = love.graphics.newImage("assets/images/car2_64x29.png")
