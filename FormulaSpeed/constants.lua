@@ -2,7 +2,7 @@ constants = {}
 
 function constants.load()
 
-    GAME_VERSION = "1.0"
+    GAME_VERSION = "1.1"
 
     SCREEN_STACK = {}
 
