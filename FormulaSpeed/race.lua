@@ -1147,7 +1147,8 @@ local function drawGearboxMatrix()
     -- draw the gears down the side of the matrix
     drawx = 50
     drawy = 50
-    for i = 1, 6 do
+    -- for i = 1, 6 do
+    for i = 6, 1, -1 do
         love.graphics.setColor(1,1,1,1)
         love.graphics.print("Gear " .. i, drawx, drawy + 4)         -- the +4 centres the text
         drawy = drawy + 25
@@ -1155,10 +1156,11 @@ local function drawGearboxMatrix()
 
     -- now fill in the matrix
     -- add white boxes everywhere
-    for i = 1, 6 do     -- this is not cars - its gears
+    -- for i = 1, 6 do     -- this is not cars - its gears
+    for i = 6, 1, -1 do
         for j = 1, 40 do
             local drawx1 = 70 + (30 * j)
-            local drawy1 = 25 + (25 * i)
+            local drawy1 = 25 + (25 * (7 - i))
             love.graphics.setColor(1,1,1,0.5)
             love.graphics.rectangle("line", drawx1, drawy1, 30, 25)
 
@@ -1666,7 +1668,7 @@ function race.draw()
         end
 
         -- draw the 'speed' required to reach the next corner
-        if currentplayer == 1 then
+        if currentplayer == 1 and not EDIT_MODE then
             if racetrack[cars[1].cell].isCorner then
                 -- do nothing
             else
