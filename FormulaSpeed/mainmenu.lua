@@ -45,8 +45,7 @@ function mainmenu.draw()
 end
 
 function mainmenu.update(dt)
-    fun.playAudio(enum.audioMainMenu, true, false)
-
+    if not DEV_MODE then fun.playAudio(enum.audioMainMenu, true, false) end
 end
 
 function mainmenu.loadButtons()

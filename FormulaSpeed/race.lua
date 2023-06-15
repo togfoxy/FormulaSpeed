@@ -201,6 +201,7 @@ local function addNewCell(x, y, pcell)
     thisCell.isCorner = false
     thisCell.speedCheck = nil               -- Number. Used at the exit of corners to check for overshoot
     thisCell.isFinish = nil
+    thisCell.laneNumber = 0                 -- defaults to zero meaning, unspecified
     thisCell.link = {}
     table.insert(racetrack, thisCell)
 
@@ -325,7 +326,11 @@ local function loadRaceTrack()
     for i = #racetrack, 1, -1 do
         if racetrack[i] == nil then
             removeLinksToCell(i)
+        else
+            if racetrack[i].laneNumber == nil then racetrack[i].laneNumber = 0 end
         end
+
+
     end
 
     trackknowledge = {}
@@ -1258,8 +1263,7 @@ function race.keyreleased(key, scancode)
             end
         end
 
-        if key == "c" then
-            -- toggle corner
+        if key == "c" then                  -- toggle corner
             local cell = getSelectedCell()
             if cell ~= nil then
                 racetrack[cell].isCorner = not racetrack[cell].isCorner
@@ -1294,6 +1298,16 @@ function race.keyreleased(key, scancode)
             local cell = getSelectedCell()
             if cell ~= nil then
                 racetrack[cell].isFinish = not racetrack[cell].isFinish
+            end
+        end
+
+        if key == "p" then          -- idk why 'p'. 'l' was already taken!
+            local cell = getSelectedCell()
+            if cell ~= nil then
+                racetrack[cell].laneNumber = racetrack[cell].laneNumber + 1
+                if racetrack[cell].laneNumber > 3 then racetrack[cell].laneNumber = 1 end       -- the lane max value should prolly be stored in the track file
+            else
+                -- no cell selected. Do nothing.
             end
         end
     end
@@ -1522,8 +1536,18 @@ function race.draw()
                 love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
             end
         end
+    elseif love.keyboard.isDown("p") then
+        -- draw the lane map
+        for k, cell in pairs(racetrack) do
+            if cell.x ~= nil then
+                love.graphics.setColor(1, 1, 1, 1)
+                local drawx = cell.x
+                local drawy = cell.y
+                love.graphics.print(cell.laneNumber, drawx, drawy)
+                love.graphics.draw(IMAGE[enum.imageCell], cell.x, cell.y, cell.rotation, celllength / 64, cellwidth / 32, 16, 8)
+            end
+        end
     else
-
         -- draw the track background first
         love.graphics.setColor(1,1,1,1)
         love.graphics.draw(IMAGE[enum.imageTrack], 0, 0, 0, 0.75, 0.75)
@@ -1710,11 +1734,12 @@ function race.draw()
         love.graphics.print("EDIT MODE", 50, 50)
 
         local drawx = SCREEN_WIDTH - sidebarwidth + 10
-        local drawy = 450
+        local drawy = 600
 
         -- print the number of the selected cell
         local getcellnumber = getSelectedCell()
         if getcellnumber ~= nil then
+            -- print debug info in the side bar
             love.graphics.print("Cell #" .. getSelectedCell(), drawx, drawy)
             drawy = drawy + 35
 
@@ -1724,6 +1749,12 @@ function race.draw()
                     love.graphics.print("Links to " .. k, drawx, drawy)
                     drawy = drawy + 35
                 end
+            end
+
+            -- draw the lane this cell belongs to
+            if racetrack[getcellnumber].laneNumber ~= nil then
+                love.graphics.print("Lane: " .. racetrack[getcellnumber].laneNumber, drawx, drawy)
+                drawy = drawy + 35
             end
         end
     end
