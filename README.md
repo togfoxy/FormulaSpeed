@@ -64,6 +64,7 @@ Contains in-game editor that lets you change the track. Click 'e' to enter edito
 
 - click any cell to highlight it
 - use mouse wheel to rotate a cell
+- shift-mouse wheel to do fine rotation of a cell
 - right-click-drag between two cells to create a link (pathway). DIRECTION IS IMPORTANT
 - repeat the right-click-drag between two cells to remove the link
 - 'delete' key will remove a cell
