@@ -34,8 +34,10 @@ function constants.load()
     savedir = love.filesystem.getSourceBaseDirectory()
     if love.filesystem.isFused() then
         savedir = savedir .. "\\savedata\\"
+        DEV_MODE = false
     else
         savedir = savedir .. "/FormulaSpeed/savedata/"
+        DEV_MODE = true
     end
 
     enums.load()
