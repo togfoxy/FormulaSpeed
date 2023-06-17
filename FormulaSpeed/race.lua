@@ -636,6 +636,7 @@ local function addCarMoves(carindex)
     -- assign a random number of moves based on new gear
     -- also takes this opportunity to capture the original lane the car is in
     local currentgear = cars[carindex].gear     -- done for readability
+    local currentcell = cars[carindex].cell
     local low = cars[carindex].gearbox[currentgear][1]
     local high = cars[carindex].gearbox[currentgear][2]
     diceroll = love.math.random(low, high)      -- capture this here and use it for the AI
@@ -659,12 +660,12 @@ local function addCarMoves(carindex)
     -- happens start of every move and is used for the bots AI. Different to history[] which is used for the ghost
     -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 on dice roll
     if cars[carindex].isOffGrid then
-        local currentcell = cars[carindex].cell
         if cars[carindex].log[currentcell] == nil then     -- at this point, desiredcell = cars[1].cell
             cars[carindex].log[currentcell] = {}
         end
         cars[carindex].log[currentcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
-        -- print("Adding dice roll " .. diceroll .. " to car log for cell #" .. currentcell)
+        if cars[carindex].gearhistory == nil then cars[carindex].gearhistory = {} end
+        cars[carindex].gearhistory[currentcell] = currentgear   -- from this cell, the car was in gear x
     end
 end
 
@@ -673,6 +674,7 @@ local function executeLegalMove(carindex, desiredcell)
     -- swerving rules are already checked and determined to be okay
     local originalcell = cars[carindex].cell
     local originalmovesleft = cars[carindex].movesleft
+    local currentgear = cars[carindex].gear     -- done for readability
     cars[carindex].cell = desiredcell               -- this is a number/index
     cars[carindex].movesleft = cars[carindex].movesleft - 1
     cars[carindex].isSpun = false       -- the act of moving causes unspin
@@ -709,7 +711,7 @@ local function executeLegalMove(carindex, desiredcell)
         -- end of turn
         cars[carindex].movesleft = 0
 
-        -- add to history if off grid. This tracks which cell the car landed on at the end of each turn
+        -- add to history if off grid. This tracks which cell the car landed on at the end of each turn. Only used for ghost
         if cars[carindex].isOffGrid then
             history[carindex][numberofturns] = cars[carindex].cell
         end
@@ -862,7 +864,19 @@ local function executeLegalMove(carindex, desiredcell)
             end
             local success = fileops.saveTrackKnowledge(trackknowledge)
             print("Knowledge save success: " .. tostring(success))
-            -- print(inspect(trackknowledge))
+
+            -- update the QTable for each cell used by the winning car
+            for cellindex, gearvalue in pairs(cars[carindex].gearhistory) do
+                if racetrack[cellindex].qtable == nil then racetrack[cellindex].qtable = {} end
+                if racetrack[cellindex].qtable[gearvalue] == nil then racetrack[cellindex].qtable[gearvalue] = 0 end
+                racetrack[cellindex].qtable[gearvalue] = racetrack[cellindex].qtable[gearvalue] + 1
+            end
+            local success = fileops.saveRaceTrack(racetrack)
+            if success then
+                print("QTables updated")
+            else
+                print("QTables failed to save")
+            end
         end
     end
 
@@ -983,9 +997,7 @@ local function returnBestPath2(carindex)
 
     local allpaths = getAllPaths2(startcell, movesleft, {}, {}, racetrack[startcell].laneNumber, lanechangesleft)      -- need to pass in the two empty tables
 
-    -- print("Valid paths reduced to: " .. inspect(allpaths))
-
-    -- cycle through once again and get the longest path. This means brake points won't be needed
+    -- cycle through and get the longest path. If possible then brake points won't be needed
     local longestpath
     local longestpathindex
     for i = 1, #allpaths do
@@ -1008,7 +1020,6 @@ local function returnBestPath2(carindex)
         end
     end
 
-    --! if all paths are deleted then all paths are blocked. Need to choose the longest unblocked path
     if longestpathindex == nil then
         print("Returning no paths")
         return {}
@@ -1576,7 +1587,8 @@ function race.draw()
 
     cam:attach()
 
-    if love.keyboard.isDown("k") then
+    if love.keyboard.isDown("k") then       -- draw AI track knowledge
+        -- draw the AI heat map/track knowledge
         -- draw the track cells
         for k, v in pairs(racetrack) do -- k is the index and v is the cell
             if v.x ~= nil then
@@ -1599,8 +1611,6 @@ function race.draw()
                     else
                         love.graphics.setColor(0, 1, 1, 1)
                     end
-
-
                 end
                 love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
             end
@@ -1614,6 +1624,21 @@ function race.draw()
                 local drawy = cell.y
                 love.graphics.print(cell.laneNumber, drawx, drawy)
                 love.graphics.draw(IMAGE[enum.imageCell], cell.x, cell.y, cell.rotation, celllength / 64, cellwidth / 32, 16, 8)
+            end
+        end
+    elseif love.keyboard.isDown("q") and not EDIT_MODE then     -- draw q table
+        -- display the Q table data
+        for cellindex, cell in pairs(racetrack) do -- k is the index and v is the cell
+            if cell.x ~= nil then
+                love.graphics.setColor(1, 1, 1, 1)      -- set colour to white and let it be overridden below
+                love.graphics.draw(IMAGE[enum.imageCell], cell.x, cell.y, cell.rotation, celllength / 64, cellwidth / 32, 16, 8)
+                txt = ""
+                for i = 1, 6 do         -- construct text
+                    if racetrack[cellindex].qtable ~= nil and racetrack[cellindex].qtable[i] ~= nil and racetrack[cellindex].qtable[i] > 0 then
+                        txt = txt .. i .. ": " .. racetrack[cellindex].qtable[i] .. "\n"
+                    end
+                end
+                love.graphics.print(txt, cell.x, cell.y, 0, 1, 1, 0, 5)
             end
         end
     else
@@ -1713,7 +1738,7 @@ function race.draw()
         end
 
         -- draw the 'speed' required to reach the next corner
-        if currentplayer == 1 and not EDIT_MODE then
+        if currentplayer == 1 and not EDIT_MODE and not love.keyboard.isDown("q") then
             if racetrack[cars[1].cell].isCorner then
                 -- do nothing
             else
@@ -1813,7 +1838,6 @@ function race.draw()
     if currentplayer > 0 then
         drawSidebar()
     end
-
 
     -- draw the gear stick on top of the sidebarwidth
     if currentplayer == 1 then
