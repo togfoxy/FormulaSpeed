@@ -95,12 +95,19 @@ function love.mousemoved(x, y, dx, dy, istouch )
 end
 
 function love.load()
-    res.init({width = 1920, height = 1080, mode = 2})
 
-	local width, height
-	width, height = love.window.getDesktopDimensions( 1 )
-	-- res.setMode(1920, 1080, {resizable = true})
+	_ = love.window.setFullscreen( true )
+    res.init({width = 1920, height = 1080, mode = 2})
+	local _, _, flags = love.window.getMode()
+	local width, height = love.window.getDesktopDimensions(flags.display)
 	res.setMode(width, height, {resizable = true})
+
+	-- 
+	--
+	-- local width, height
+	-- width, height = love.window.getDesktopDimensions( 1 )
+	-- -- res.setMode(1920, 1080, {resizable = true})
+	-- res.setMode(width, height, {resizable = true})
 
 	enums.load()
 	constants.load()

@@ -634,6 +634,7 @@ end
 local function addCarMoves(carindex)
     -- need to set the correct gear BEFORE calling this function
     -- assign a random number of moves based on new gear
+    -- also takes this opportunity to capture the original lane the car is in
     local currentgear = cars[carindex].gear     -- done for readability
     local low = cars[carindex].gearbox[currentgear][1]
     local high = cars[carindex].gearbox[currentgear][2]
@@ -643,6 +644,15 @@ local function addCarMoves(carindex)
     if carindex > 1 then
         print("*************************")
         print("Dice roll for car #" .. carindex .. " is " .. diceroll)
+    end
+
+    -- capture the lane of the care at the start of the turn
+    local currentlane = racetrack[cars[carindex].cell].laneNumber
+    cars[carindex].originalLane = currentlane
+    if currentlane == 1 or currentlane == 3 then
+        cars[carindex].laneChangesLeft = 2
+    else
+        cars[carindex].laneChangesLeft = 1
     end
 
     -- add move to the log file for this car
@@ -660,12 +670,18 @@ end
 
 local function executeLegalMove(carindex, desiredcell)
     -- moves to desired cell which is just one cell away
+    -- swerving rules are already checked and determined to be okay
     local originalcell = cars[carindex].cell
     local originalmovesleft = cars[carindex].movesleft
-    cars[carindex].cell = desiredcell
+    cars[carindex].cell = desiredcell               -- this is a number/index
     cars[carindex].movesleft = cars[carindex].movesleft - 1
     cars[carindex].isSpun = false       -- the act of moving causes unspin
     fun.playAudio(enum.audioClick, false, true)
+
+    -- register a lane change
+    if cars[carindex].originalLane ~= racetrack[desiredcell].laneNumber then
+        cars[carindex].laneChangesLeft = cars[carindex].laneChangesLeft - 1
+    end
 
     -- check if car is moving off grid
     if racetrack[originalcell].isFinish ~= nil and racetrack[originalcell].isFinish and not racetrack[desiredcell].isFinish then
@@ -754,7 +770,7 @@ local function executeLegalMove(carindex, desiredcell)
                     if cars[carindex].wptyres > originalmovesleft then
                         -- normal overshoot
                         local txt = "Car #" .. carindex .. " used " .. originalmovesleft .. " tyre points"
-                        lovelyToasts.show(txt, 10, "middle")
+                        lovelyToasts.show(txt, 7, "middle")
                         cars[carindex].wptyres = cars[carindex].wptyres - originalmovesleft
                         fun.playAudio(enum.audioSkid, false, true)
                     elseif cars[carindex].wptyres == originalmovesleft then
@@ -764,7 +780,7 @@ local function executeLegalMove(carindex, desiredcell)
                         cars[carindex].gear = 0
                         cars[carindex].movesleft = 0
                         local txt = "Car #" .. carindex .. " has no tyre points left. Car has spun"
-                        lovelyToasts.show(txt, 10, "middle")
+                        lovelyToasts.show(txt, 7, "middle")
                         fun.playAudio(enum.audioSkid, false, true )
                     elseif originalmovesleft > cars[carindex].wptyres then
                         -- crash out
@@ -1001,7 +1017,7 @@ local function returnBestPath(carindex)
 end
 
 local function applyMoves(carindex)
-
+    -- this is for bots
     local txt = ""
     local path = {}
     -- print("About to find the best path")
@@ -1390,7 +1406,7 @@ function race.mousereleased(rx, ry, x, y, button)
                         if gearchange >= -1 and gearchange <= 1 then
                             -- a shift up/down or same gear is legit
                             cars[1].gear = desiredgear
-                            addCarMoves(1)      -- car index
+                            addCarMoves(1)      -- car index. Also captures current lane
                         else
                             if cars[1].wpgearbox == 0 then
                                 -- gearbox damaged. Can only shift one gear. Ignore this click
@@ -1424,28 +1440,39 @@ function race.mousereleased(rx, ry, x, y, button)
                 end
             end
             if button == 2 then
-                -- try to move the car to the selected cell if linked
+                -- try to move the players car to the selected cell if linked
                 if not cars[1].isEliminated then
                     if cars[1].movesleft > 0 then
                         local originalcell = cars[1].cell
                         local desiredcell = getSelectedCell()
-
                         if desiredcell ~= nil then
-                            if racetrack[originalcell].link[desiredcell] == true then
-                                -- move is legal but is cell blocked?
-                                if isCellClear(desiredcell) then
-                                    executeLegalMove(1, desiredcell)
-                                    if cars[1].movesleft < 1 then
-                                        cars[1].movesleft = 0
-                                        cars[1].turns = cars[1].turns + 1
-                                        incCurrentPlayer()
+                            -- see if the move breaks swerving rules
+                            -- only applies on the straights
+                            -- if staying in lane then good
+                            -- if changing lanes, lane change counter > 0 and not returning to original lane then good
+                            if (racetrack[desiredcell].laneNumber == racetrack[originalcell].laneNumber) or
+                                (cars[1].laneChangesLeft > 0 and racetrack[desiredcell].laneNumber ~= cars[1].originalLane) or
+                                (racetrack[originalcell].isCorner) then
+
+                                if racetrack[originalcell].link[desiredcell] == true then
+                                    -- move is legal but is cell blocked?
+                                    if isCellClear(desiredcell) then
+                                        executeLegalMove(1, desiredcell)
+                                        if cars[1].movesleft < 1 then
+                                            cars[1].movesleft = 0
+                                            cars[1].turns = cars[1].turns + 1
+                                            incCurrentPlayer()
+                                        end
+                                    else
+                                        --! put some sort of beeping noise to say it's an illegal move
                                     end
-                                else
-                                    --! put some sort of beeping noise to say it's an illegal move
                                 end
+                            else
+                                -- swerving too much
+                                print("Attempted lane swerve blocked.")
                             end
                         else
-                            -- no desired cell. Do nothing. Move not legal
+                        -- no desired cell. Do nothing. Move not legal
                         end
                     end
                 else
@@ -1529,7 +1556,7 @@ end
 function race.mousemoved(x, y, dx, dy, istouch)
     local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
 
-    if love.mouse.isDown(3) then
+    if love.mouse.isDown(2)  or love.mouse.isDown(3) then
         TRANSLATEX = TRANSLATEX - dx
         TRANSLATEY = TRANSLATEY - dy
     end
