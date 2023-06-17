@@ -1556,7 +1556,7 @@ end
 function race.mousemoved(x, y, dx, dy, istouch)
     local camx, camy = cam:toWorld(x, y)	-- converts screen x/y to world x/y
 
-    if love.mouse.isDown(3) then
+    if love.mouse.isDown(2)  or love.mouse.isDown(3) then
         TRANSLATEX = TRANSLATEX - dx
         TRANSLATEY = TRANSLATEY - dy
     end
