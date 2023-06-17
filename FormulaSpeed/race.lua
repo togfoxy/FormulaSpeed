@@ -664,7 +664,8 @@ local function addCarMoves(carindex)
             cars[carindex].log[currentcell] = {}
         end
         cars[carindex].log[currentcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
-        -- print("Adding dice roll " .. diceroll .. " to car log for cell #" .. currentcell)
+        if cars[carindex].gearhistory == nil then cars[carindex].gearhistory = {} end
+        cars[carindex].gearhistory[currentcell] = currentgear   -- from this cell, the car was in gear x
     end
 end
 
@@ -673,6 +674,7 @@ local function executeLegalMove(carindex, desiredcell)
     -- swerving rules are already checked and determined to be okay
     local originalcell = cars[carindex].cell
     local originalmovesleft = cars[carindex].movesleft
+    local currentgear = cars[carindex].gear     -- done for readability
     cars[carindex].cell = desiredcell               -- this is a number/index
     cars[carindex].movesleft = cars[carindex].movesleft - 1
     cars[carindex].isSpun = false       -- the act of moving causes unspin
@@ -709,7 +711,12 @@ local function executeLegalMove(carindex, desiredcell)
         -- end of turn
         cars[carindex].movesleft = 0
 
-        -- add to history if off grid. This tracks which cell the car landed on at the end of each turn
+        --! debugging only
+        if racetrack[originalcell].qtable == nil then racetrack[originalcell].qtable = {} end
+        if racetrack[originalcell].qtable[currentgear] == nil then racetrack[originalcell].qtable[currentgear] = 0 end
+        racetrack[originalcell].qtable[currentgear] = racetrack[originalcell].qtable[currentgear] + 1
+
+        -- add to history if off grid. This tracks which cell the car landed on at the end of each turn. Only used for ghost
         if cars[carindex].isOffGrid then
             history[carindex][numberofturns] = cars[carindex].cell
         end
@@ -860,9 +867,14 @@ local function executeLegalMove(carindex, desiredcell)
                     end
                 end
             end
+
+            -- update the QTable for each cell used by the winning car
+            for cellindex, gearvalue in pairs(cars[carindex].gearhistory) do
+                racetrack[cellindex].qtable[gearvalue] = racetrack[cellindex].qtable[gearvalue] + 1
+            end
+
             local success = fileops.saveTrackKnowledge(trackknowledge)
             print("Knowledge save success: " .. tostring(success))
-            -- print(inspect(trackknowledge))
         end
     end
 
@@ -871,6 +883,7 @@ local function executeLegalMove(carindex, desiredcell)
     else
         pausetimer = 1.0			-- seconds
     end
+
 end
 
 local function botSelectGear(botnumber)
@@ -983,9 +996,7 @@ local function returnBestPath2(carindex)
 
     local allpaths = getAllPaths2(startcell, movesleft, {}, {}, racetrack[startcell].laneNumber, lanechangesleft)      -- need to pass in the two empty tables
 
-    -- print("Valid paths reduced to: " .. inspect(allpaths))
-
-    -- cycle through once again and get the longest path. This means brake points won't be needed
+    -- cycle through and get the longest path. If possible then brake points won't be needed
     local longestpath
     local longestpathindex
     for i = 1, #allpaths do
@@ -1008,7 +1019,6 @@ local function returnBestPath2(carindex)
         end
     end
 
-    --! if all paths are deleted then all paths are blocked. Need to choose the longest unblocked path
     if longestpathindex == nil then
         print("Returning no paths")
         return {}
