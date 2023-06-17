@@ -647,7 +647,7 @@ local function addCarMoves(carindex)
     end
 
     -- capture the lane of the care at the start of the turn
-    local currentlane = racetrack[carindex.cell].laneNumber
+    local currentlane = racetrack[cars[carindex].cell].laneNumber
     cars[carindex].originalLane = currentlane
     if currentlane == 1 or currentlane == 3 then
         cars[carindex].laneChangesLeft = 2
