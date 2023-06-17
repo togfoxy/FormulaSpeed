@@ -646,7 +646,7 @@ local function addCarMoves(carindex)
         print("Dice roll for car #" .. carindex .. " is " .. diceroll)
     end
 
-    -- capture the lane of the care at the start of the turn
+    -- capture the lane of the car at the start of the turn
     local currentlane = racetrack[cars[carindex].cell].laneNumber
     cars[carindex].originalLane = currentlane
     if currentlane == 1 or currentlane == 3 then
@@ -679,7 +679,7 @@ local function executeLegalMove(carindex, desiredcell)
     fun.playAudio(enum.audioClick, false, true)
 
     -- register a lane change
-    if cars[carindex].originalLane ~= racetrack[desiredcell].laneNumber then
+    if cars[carindex].originalLane ~= racetrack[desiredcell].laneNumber and not racetrack[originalcell].isCorner then
         cars[carindex].laneChangesLeft = cars[carindex].laneChangesLeft - 1
     end
 
@@ -933,8 +933,52 @@ local function botSelectGear(botnumber)
     return result
 end
 
+local function getAllPaths2(rootcell, movesneeded, path, allpaths, originalLane, laneChangesLeft)
+    -- this took about 6 hours to write. Don't ask me how it works
+    -- returns all paths that are of length <movesneeded>
+
+    assert(movesneeded > 0)
+
+    for linkedcellnumber, linked in pairs(racetrack[rootcell].link) do
+        local newLaneChangesLeft = laneChangesLeft          -- default value that MIGHT be changed below
+        if linked == true then
+            if isCellClear(linkedcellnumber) then   -- invalid if next cell is blocked
+                if (racetrack[linkedcellnumber].laneNumber == racetrack[rootcell].laneNumber) or
+                    (newLaneChangesLeft > 0 and racetrack[linkedcellnumber].laneNumber ~= originalLane) or
+                    (racetrack[rootcell].isCorner) then
+
+                    table.insert(path, linkedcellnumber)
+                    -- see if a lane change was used
+                    if (racetrack[linkedcellnumber].laneNumber ~= racetrack[rootcell].laneNumber) and not racetrack[rootcell].isCorner then
+                        newLaneChangesLeft = newLaneChangesLeft - 1
+                    end
+
+                    if #path >= movesneeded then
+                        local temptable = cf.deepcopy(path)
+                        table.insert(allpaths, temptable)
+                        table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
+                        -- if #allpaths >= PathThreshold then
+                        --     return(allpaths)
+                        -- end
+                    else
+                        local allpaths = getAllPaths2(path[#path], movesneeded, path, allpaths, originalLane, newLaneChangesLeft)
+                    end
+                else
+                end
+            else
+            end
+        end
+    end
+    table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
+    return(allpaths)
+end
+
 local function getAllPaths(rootcell, movesneeded, path, allpaths)
     -- this took about 6 hours to write. Don't ask me how it works
+    -- returns all paths that are of length <movesneeded>
+    -- ignores blocked lanes
+    -- ignores swerve rules
+
     assert(movesneeded > 0)
 
     for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
@@ -1677,6 +1721,24 @@ function race.draw()
                 love.graphics.setFont(FONT[enum.fontCorporate])
                 love.graphics.print(cars[1].movesleft, drawx + 20, drawy - 5)
                 love.graphics.setFont(FONT[enum.fontDefault])
+            end
+
+            -- draw all paths
+            if cars[1].movesleft > 0 and DEV_MODE then           -- this movesleft > 0 can be combined with above but slipt out for readability
+                -- local allpaths = getAllPaths(cars[1].cell, cars[1].movesleft, {}, {})      -- need to pass in the two empty tables
+                local allpaths = getAllPaths2(cars[1].cell, cars[1].movesleft, {}, {}, cars[1].originalLane, cars[1].laneChangesLeft)
+
+                for _, path in pairs(allpaths) do
+                    local linkednodes = {}
+                    table.insert(linkednodes, racetrack[cars[1].cell].x)
+                    table.insert(linkednodes, racetrack[cars[1].cell].y)
+                    for _, node in pairs(path) do       -- a node is a cell index
+                        table.insert(linkednodes, racetrack[node].x)
+                        table.insert(linkednodes, racetrack[node].y)
+                    end
+                    love.graphics.setColor(0,1,1,1)
+                    love.graphics.line(linkednodes)
+                end
             end
         end
 
