@@ -862,14 +862,21 @@ local function executeLegalMove(carindex, desiredcell)
                     end
                 end
             end
+            local success = fileops.saveTrackKnowledge(trackknowledge)
+            print("Knowledge save success: " .. tostring(success))
 
             -- update the QTable for each cell used by the winning car
             for cellindex, gearvalue in pairs(cars[carindex].gearhistory) do
+                if racetrack[cellindex].qtable == nil then racetrack[cellindex].qtable = {} end
+                if racetrack[cellindex].qtable[gearvalue] == nil then racetrack[cellindex].qtable[gearvalue] = 0 end
                 racetrack[cellindex].qtable[gearvalue] = racetrack[cellindex].qtable[gearvalue] + 1
             end
-
-            local success = fileops.saveTrackKnowledge(trackknowledge)
-            print("Knowledge save success: " .. tostring(success))
+            local success = fileops.saveRaceTrack(racetrack)
+            if success then
+                print("QTables updated")
+            else
+                print("QTables failed to save")
+            end
         end
     end
 
@@ -878,7 +885,6 @@ local function executeLegalMove(carindex, desiredcell)
     else
         pausetimer = 1.0			-- seconds
     end
-
 end
 
 local function botSelectGear(botnumber)
@@ -1632,7 +1638,7 @@ function race.draw()
                         txt = txt .. i .. ": " .. racetrack[cellindex].qtable[i] .. "\n"
                     end
                 end
-                love.graphics.print(txt, cell.x, cell.y)
+                love.graphics.print(txt, cell.x, cell.y, 0, 1, 1, 0, 5)
             end
         end
     else
