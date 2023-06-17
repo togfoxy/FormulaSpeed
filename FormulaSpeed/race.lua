@@ -772,6 +772,7 @@ local function executeLegalMove(carindex, desiredcell)
                         local txt = "Car #" .. carindex .. " used " .. originalmovesleft .. " tyre points"
                         lovelyToasts.show(txt, 7, "middle")
                         cars[carindex].wptyres = cars[carindex].wptyres - originalmovesleft
+                        cars[carindex].movesleft = 0
                         fun.playAudio(enum.audioSkid, false, true)
                     elseif cars[carindex].wptyres == originalmovesleft then
                         -- spin becaue overshoot amount == wptyres
@@ -785,6 +786,7 @@ local function executeLegalMove(carindex, desiredcell)
                     elseif originalmovesleft > cars[carindex].wptyres then
                         -- crash out
                         txt = ("Car #" .. carindex .. " has crashed. Overshoot amount is greater than tyre wear points")
+                        cars[carindex].movesleft = 0
                         eliminateCar(carindex, true, txt)
                         fun.playAudio(enum.audioSkid, false, true)
                     end
@@ -973,59 +975,13 @@ local function getAllPaths2(rootcell, movesneeded, path, allpaths, originalLane,
     return(allpaths)
 end
 
-local function getAllPaths(rootcell, movesneeded, path, allpaths)
-    -- this took about 6 hours to write. Don't ask me how it works
-    -- returns all paths that are of length <movesneeded>
-    -- ignores blocked lanes
-    -- ignores swerve rules
-
-    assert(movesneeded > 0)
-
-    for linkedcellnumber, link in pairs(racetrack[rootcell].link) do
-        if link == true then
-            table.insert(path, linkedcellnumber)
-            if #path >= movesneeded then
-                local temptable = cf.deepcopy(path)
-                table.insert(allpaths, temptable)
-                table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-                if #allpaths >= PathThreshold then
-                    return(allpaths)
-                end
-            else
-                local allpaths = getAllPaths(path[#path], movesneeded, path, allpaths)
-            end
-        end
-    end
-    table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-    return(allpaths)
-end
-
-local function returnBestPath(carindex)
+local function returnBestPath2(carindex)
 
     local startcell = cars[carindex].cell
     local movesleft = cars[carindex].movesleft
+    local lanechangesleft = cars[carindex].laneChangesLeft
 
-    local allpaths = getAllPaths(startcell, movesleft, {}, {})      -- need to pass in the two empty tables
-
-    -- print("Reviewing these paths for blocks: " .. inspect(allpaths))
-
-    -- traverse each path. If a block is found then delete that cell and every cell after that block
-    for i = #allpaths, 1, -1 do
-        -- scan this path (i) for a blockage
-        -- print("Scanning this path for a block: " .. inspect(allpaths[i]))
-        local blockedcell        -- nil
-        for j = 1, #allpaths[i] do
-            if not isCellClear(allpaths[i][j]) then
-                -- truncate this table at this point (j)
-                for k = #allpaths[i], j, -1 do
-                    -- print("Cell #" .. allpaths[i][j] .. " is blocked. Truncating path")
-                    table.remove(allpaths[i])
-                end
-                -- print("Path is now " .. inspect(allpaths[i]))
-                break
-            end
-        end
-    end
+    local allpaths = getAllPaths2(startcell, movesleft, {}, {}, racetrack[startcell].laneNumber, lanechangesleft)      -- need to pass in the two empty tables
 
     -- print("Valid paths reduced to: " .. inspect(allpaths))
 
@@ -1065,7 +1021,7 @@ local function applyMoves(carindex)
     local txt = ""
     local path = {}
     -- print("About to find the best path")
-    path = returnBestPath(carindex)             -- returns the single best path
+    path = returnBestPath2(carindex)             -- returns the single best path
 
     while path ~= nil and #path > 0 do
         local desiredcell = path[1]
@@ -1725,7 +1681,7 @@ function race.draw()
 
             -- draw all paths
             if cars[1].movesleft > 0 and DEV_MODE then           -- this movesleft > 0 can be combined with above but slipt out for readability
-                -- local allpaths = getAllPaths(cars[1].cell, cars[1].movesleft, {}, {})      -- need to pass in the two empty tables
+
                 local allpaths = getAllPaths2(cars[1].cell, cars[1].movesleft, {}, {}, cars[1].originalLane, cars[1].laneChangesLeft)
 
                 for _, path in pairs(allpaths) do
