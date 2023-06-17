@@ -636,6 +636,7 @@ local function addCarMoves(carindex)
     -- assign a random number of moves based on new gear
     -- also takes this opportunity to capture the original lane the car is in
     local currentgear = cars[carindex].gear     -- done for readability
+    local currentcell = cars[carindex].cell
     local low = cars[carindex].gearbox[currentgear][1]
     local high = cars[carindex].gearbox[currentgear][2]
     diceroll = love.math.random(low, high)      -- capture this here and use it for the AI
@@ -659,7 +660,6 @@ local function addCarMoves(carindex)
     -- happens start of every move and is used for the bots AI. Different to history[] which is used for the ghost
     -- example format:  cars[1].log[23].movesleft = 10      -- car 1 log for cell 23 = 10 on dice roll
     if cars[carindex].isOffGrid then
-        local currentcell = cars[carindex].cell
         if cars[carindex].log[currentcell] == nil then     -- at this point, desiredcell = cars[1].cell
             cars[carindex].log[currentcell] = {}
         end
@@ -710,11 +710,6 @@ local function executeLegalMove(carindex, desiredcell)
     if cars[carindex].movesleft < 1 then
         -- end of turn
         cars[carindex].movesleft = 0
-
-        --! debugging only
-        if racetrack[originalcell].qtable == nil then racetrack[originalcell].qtable = {} end
-        if racetrack[originalcell].qtable[currentgear] == nil then racetrack[originalcell].qtable[currentgear] = 0 end
-        racetrack[originalcell].qtable[currentgear] = racetrack[originalcell].qtable[currentgear] + 1
 
         -- add to history if off grid. This tracks which cell the car landed on at the end of each turn. Only used for ghost
         if cars[carindex].isOffGrid then
@@ -1586,7 +1581,8 @@ function race.draw()
 
     cam:attach()
 
-    if love.keyboard.isDown("k") then
+    if love.keyboard.isDown("k") then       -- draw AI track knowledge
+        -- draw the AI heat map/track knowledge
         -- draw the track cells
         for k, v in pairs(racetrack) do -- k is the index and v is the cell
             if v.x ~= nil then
@@ -1609,8 +1605,6 @@ function race.draw()
                     else
                         love.graphics.setColor(0, 1, 1, 1)
                     end
-
-
                 end
                 love.graphics.draw(IMAGE[enum.imageCell], v.x, v.y, v.rotation, celllength / 64, cellwidth / 32, 16, 8)
             end
@@ -1624,6 +1618,21 @@ function race.draw()
                 local drawy = cell.y
                 love.graphics.print(cell.laneNumber, drawx, drawy)
                 love.graphics.draw(IMAGE[enum.imageCell], cell.x, cell.y, cell.rotation, celllength / 64, cellwidth / 32, 16, 8)
+            end
+        end
+    elseif love.keyboard.isDown("q") and not EDIT_MODE then     -- draw q table
+        -- display the Q table data
+        for cellindex, cell in pairs(racetrack) do -- k is the index and v is the cell
+            if cell.x ~= nil then
+                love.graphics.setColor(1, 1, 1, 1)      -- set colour to white and let it be overridden below
+                love.graphics.draw(IMAGE[enum.imageCell], cell.x, cell.y, cell.rotation, celllength / 64, cellwidth / 32, 16, 8)
+                txt = ""
+                for i = 1, 6 do         -- construct text
+                    if racetrack[cellindex].qtable ~= nil and racetrack[cellindex].qtable[i] ~= nil and racetrack[cellindex].qtable[i] > 0 then
+                        txt = txt .. i .. ": " .. racetrack[cellindex].qtable[i] .. "\n"
+                    end
+                end
+                love.graphics.print(txt, cell.x, cell.y)
             end
         end
     else
@@ -1723,7 +1732,7 @@ function race.draw()
         end
 
         -- draw the 'speed' required to reach the next corner
-        if currentplayer == 1 and not EDIT_MODE then
+        if currentplayer == 1 and not EDIT_MODE and not love.keyboard.isDown("q") then
             if racetrack[cars[1].cell].isCorner then
                 -- do nothing
             else
@@ -1823,7 +1832,6 @@ function race.draw()
     if currentplayer > 0 then
         drawSidebar()
     end
-
 
     -- draw the gear stick on top of the sidebarwidth
     if currentplayer == 1 then
