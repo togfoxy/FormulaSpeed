@@ -634,6 +634,7 @@ end
 local function addCarMoves(carindex)
     -- need to set the correct gear BEFORE calling this function
     -- assign a random number of moves based on new gear
+    -- also takes this opportunity to capture the original lane the car is in
     local currentgear = cars[carindex].gear     -- done for readability
     local low = cars[carindex].gearbox[currentgear][1]
     local high = cars[carindex].gearbox[currentgear][2]
@@ -643,6 +644,15 @@ local function addCarMoves(carindex)
     if carindex > 1 then
         print("*************************")
         print("Dice roll for car #" .. carindex .. " is " .. diceroll)
+    end
+
+    -- capture the lane of the care at the start of the turn
+    local currentlane = racetrack[carindex.cell].laneNumber
+    cars[carindex].originalLane = currentlane
+    if currentlane == 1 or currentlane == 3 then
+        cars[carindex].laneChangesLeft = 2
+    else
+        cars[carindex].laneChangesLeft = 1
     end
 
     -- add move to the log file for this car
@@ -1001,7 +1011,7 @@ local function returnBestPath(carindex)
 end
 
 local function applyMoves(carindex)
-
+    -- this is for bots
     local txt = ""
     local path = {}
     -- print("About to find the best path")
@@ -1390,7 +1400,7 @@ function race.mousereleased(rx, ry, x, y, button)
                         if gearchange >= -1 and gearchange <= 1 then
                             -- a shift up/down or same gear is legit
                             cars[1].gear = desiredgear
-                            addCarMoves(1)      -- car index
+                            addCarMoves(1)      -- car index. Also captures current lane
                         else
                             if cars[1].wpgearbox == 0 then
                                 -- gearbox damaged. Can only shift one gear. Ignore this click
