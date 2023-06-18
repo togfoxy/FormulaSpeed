@@ -80,7 +80,6 @@ local function getDistanceToNextCorner(startcell)
             end
         end
     end
-    --! should check for nextcell == nil
     if nextcell == nil or result == nil then
         -- oops - something has gone wrong
         print(currentcell)
@@ -640,6 +639,7 @@ local function addCarMoves(carindex)
     local high = cars[carindex].gearbox[currentgear][2]
     diceroll = love.math.random(low, high)      -- capture this here and use it for the AI
     cars[carindex].movesleft = diceroll
+    cars[carindex].originalCell = currentcell
 
     if carindex > 1 then
         print("Dice roll for car #" .. carindex .. " is " .. diceroll)
@@ -662,16 +662,17 @@ local function addCarMoves(carindex)
             cars[carindex].log[currentcell] = {}
         end
         cars[carindex].log[currentcell].moves = diceroll       -- basically saying "rolled this dice from this cell"
+
         if cars[carindex].gearhistory == nil then cars[carindex].gearhistory = {} end
-        cars[carindex].gearhistory[currentcell] = currentgear   -- from this cell, the car was in gear x
+        cars[carindex].gearhistory[currentcell] = currentgear   -- from this cell, the car was in gear x. Different to dice roll
     end
 end
 
 local function executeLegalMove(carindex, desiredcell)
     -- moves to desired cell which is just one cell away
     -- swerving rules are already checked and determined to be okay
-    local originalcell = cars[carindex].cell
-    local originalmovesleft = cars[carindex].movesleft
+    local originalcell = cars[carindex].cell                    --! bad name. previouscell is more accurate
+    local originalmovesleft = cars[carindex].movesleft          -- bad name. It is how many moves are left in this turn
     local currentgear = cars[carindex].gear     -- done for readability
     cars[carindex].cell = desiredcell               -- this is a number/index
     cars[carindex].movesleft = cars[carindex].movesleft - 1
@@ -756,7 +757,17 @@ local function executeLegalMove(carindex, desiredcell)
         if brakescore <= 0 then     -- brake score relates to the yellow flag.
             -- correct brakes taken. No problems
         else        -- overshoot
-            -- overshoot
+            -- overshoot. Adjust QTable immediately
+
+            --! bugged. This is taking off previous cell - not the original cell car was on during dice roll
+            local weight = 0.2 * originalmovesleft
+            local startingcell = cars[carindex].originalCell            -- correct name is "originalCell" but it's already used in this sub
+            if qtable[startingcell] == nil then qtable[startingcell] = {} end
+            if qtable[startingcell].gear == nil then qtable[startingcell].gear = {} end
+            if qtable[startingcell].gear[currentgear] == nil then qtable[startingcell].gear[currentgear] = 0 end
+            qtable[startingcell].gear[currentgear] = cf.round(qtable[startingcell].gear[currentgear] - weight, 4)
+            print("Taking qtable weight value of " .. weight .. " off cell #" .. startingcell ..". Value is now " .. qtable[startingcell].gear[currentgear])
+
             if brakescore >= 2 then
                 -- elimination
                 local txt = "Car #" .. carindex .. " ignored yellow flag and is eliminated"
@@ -938,7 +949,7 @@ local function botSelectGear2(botnumber)
                     if qvalue >= bestqvalue then
                         bestqvalue = qvalue
                         bestgear = gearindex
-                        print("Qtable suggesting gear #" .. bestgear)
+                        print("Qtable suggesting gear #" .. bestgear .. " for car #" .. botnumber)
                     end
                 end
                 if bestgear > currentgear then
@@ -1648,11 +1659,11 @@ function race.draw()
                 if qtable ~= nil and qtable[cellindex] ~= nil then
                     txt = ""
                     for i = 1, 6 do         -- construct text
-                        if qtable[cellindex].gear ~= nil and qtable[cellindex].gear[i] ~= nil and qtable[cellindex].gear[i] > 0 then
+                        if qtable[cellindex].gear ~= nil and qtable[cellindex].gear[i] ~= nil and qtable[cellindex].gear[i] ~= 0 then
                             txt = txt .. i .. ": " .. qtable[cellindex].gear[i] .. "\n"
                         end
                     end
-                    love.graphics.print(txt, cell.x, cell.y, 0, 1, 1, 0, 5)
+                    love.graphics.print(txt, cell.x, cell.y, 0, 1, 1, 2, 8)
                 end
             end
         end
@@ -1752,22 +1763,23 @@ function race.draw()
             end
         end
 
+        --! turning off due to causing overflow errors
         -- draw the 'speed' required to reach the next corner
-        if currentplayer == 1 and not EDIT_MODE and not love.keyboard.isDown("q") then
-            if racetrack[cars[1].cell].isCorner then
-                -- do nothing
-            else
-                -- get distance to next corner,assuming same lane
-                local distance, cornercell = getDistanceToNextCorner(cars[1].cell)
-                drawx = racetrack[cornercell].x
-                drawy = racetrack[cornercell].y
-
-                love.graphics.setColor(1,1,1,1)
-                love.graphics.draw(IMAGE[enum.imageSpeedSign], drawx, drawy, 0 , 1, 1, 20, 20)
-                love.graphics.setColor(1,0,0,1)
-                love.graphics.print(distance, drawx, drawy, 0, 1.25, 1.25, 3, 5)
-            end
-        end
+        -- if currentplayer == 1 and not EDIT_MODE and not love.keyboard.isDown("q") then
+        --     if racetrack[cars[1].cell].isCorner then
+        --         -- do nothing
+        --     else
+        --         -- get distance to next corner,assuming same lane
+        --         local distance, cornercell = getDistanceToNextCorner(cars[1].cell)
+        --         drawx = racetrack[cornercell].x
+        --         drawy = racetrack[cornercell].y
+        --
+        --         love.graphics.setColor(1,1,1,1)
+        --         love.graphics.draw(IMAGE[enum.imageSpeedSign], drawx, drawy, 0 , 1, 1, 20, 20)
+        --         love.graphics.setColor(1,0,0,1)
+        --         love.graphics.print(distance, drawx, drawy, 0, 1.25, 1.25, 3, 5)
+        --     end
+        -- end
     end
 
     -- draw any mouse line things
