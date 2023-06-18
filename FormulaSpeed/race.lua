@@ -13,6 +13,7 @@ local gearstick = {}            -- made this a table so I can do graphics stuff
 
 local ghost = {}                -- tracks the ghosts movements
 local history = {}              -- eg history[1][12] = cell 29     (car 1, turn 12, cell 29)
+local qtable = {}
 local oilslick = {}             -- track where the oil slicks are eg oilslick[33] = true
 
 local EDIT_MODE = false                -- true/false
@@ -22,8 +23,6 @@ local numberofturns = 0
 local diceroll = nil                    -- this is the number of moves allocated when choosing a gear.
 local currentplayer = 1                 -- value from 1 -> numofcars
 local pausetimer = 0 -- track time between bot moves so player can see what is happening
-
-local PathThreshold = 60                -- used by 'getPaths' to tune the algorithm workload
 
 local function eliminateCar(carindex, isSpun, msg)
     -- it has been determined this car needs to be eliminated
@@ -369,8 +368,6 @@ local function loadRaceTrack()
         else
             if racetrack[i].laneNumber == nil then racetrack[i].laneNumber = 0 end
         end
-
-
     end
 
     trackknowledge = {}
@@ -380,6 +377,8 @@ local function loadRaceTrack()
     else
         print("Track knowledge loaded.")
     end
+
+    qtable = cf.loadTableFromFile("qtable.dat")
 
     print("Knowledge size = " .. #trackknowledge)
 	local tksum = 0
@@ -866,12 +865,30 @@ local function executeLegalMove(carindex, desiredcell)
             print("Knowledge save success: " .. tostring(success))
 
             -- update the QTable for each cell used by the winning car
-            for cellindex, gearvalue in pairs(cars[carindex].gearhistory) do
-                if racetrack[cellindex].qtable == nil then racetrack[cellindex].qtable = {} end
-                if racetrack[cellindex].qtable[gearvalue] == nil then racetrack[cellindex].qtable[gearvalue] = 0 end
-                racetrack[cellindex].qtable[gearvalue] = racetrack[cellindex].qtable[gearvalue] + 1
+            -- determine the weight to add to the qtable
+            local weight
+            local PB                -- known track record
+            if ghost == nil then
+                PB = 15                 -- arbitrary value
+            else
+                PB = #ghost
             end
-            local success = fileops.saveRaceTrack(racetrack)
+            if numberofturns <= PB then
+                weight = 1          -- 1 is the heightest possible weight
+            else
+                weight = 1 / ((numberofturns + 1) - PB)       -- gives a value between 0 -> 1. Times closer to PB get a higher weight
+                                                              -- the + 1 gives more even results
+            end
+
+            for cellindex, gearvalue in pairs(cars[carindex].gearhistory) do
+                if qtable == nil then qtable = {} end
+                if qtable[cellindex] == nil then qtable[cellindex] = {} end
+                if qtable[cellindex].gear == nil then qtable[cellindex].gear = {} end
+                if qtable[cellindex].gear[gearvalue] == nil then qtable[cellindex].gear[gearvalue] = 0 end
+
+                qtable[cellindex].gear[gearvalue] = cf.round(qtable[cellindex].gear[gearvalue] + weight, 4)
+            end
+            local success = cf.saveTableToFile("qtable.dat", qtable)
             if success then
                 print("QTables updated")
             else
@@ -973,9 +990,6 @@ local function getAllPaths2(rootcell, movesneeded, path, allpaths, originalLane,
                         local temptable = cf.deepcopy(path)
                         table.insert(allpaths, temptable)
                         table.remove(path)      -- pop the last item off so the pairs can move on and append to this trimmed path
-                        -- if #allpaths >= PathThreshold then
-                        --     return(allpaths)
-                        -- end
                     else
                         local allpaths = getAllPaths2(path[#path], movesneeded, path, allpaths, originalLane, newLaneChangesLeft)
                     end
@@ -1632,13 +1646,16 @@ function race.draw()
             if cell.x ~= nil then
                 love.graphics.setColor(1, 1, 1, 1)      -- set colour to white and let it be overridden below
                 love.graphics.draw(IMAGE[enum.imageCell], cell.x, cell.y, cell.rotation, celllength / 64, cellwidth / 32, 16, 8)
-                txt = ""
-                for i = 1, 6 do         -- construct text
-                    if racetrack[cellindex].qtable ~= nil and racetrack[cellindex].qtable[i] ~= nil and racetrack[cellindex].qtable[i] > 0 then
-                        txt = txt .. i .. ": " .. racetrack[cellindex].qtable[i] .. "\n"
+
+                if qtable ~= nil and qtable[cellindex] ~= nil then
+                    txt = ""
+                    for i = 1, 6 do         -- construct text
+                        if qtable[cellindex].gear ~= nil and qtable[cellindex].gear[i] ~= nil and qtable[cellindex].gear[i] > 0 then
+                            txt = txt .. i .. ": " .. qtable[cellindex].gear[i] .. "\n"
+                        end
                     end
+                    love.graphics.print(txt, cell.x, cell.y, 0, 1, 1, 0, 5)
                 end
-                love.graphics.print(txt, cell.x, cell.y, 0, 1, 1, 0, 5)
             end
         end
     else

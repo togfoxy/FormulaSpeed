@@ -332,3 +332,26 @@ end
 function rotate_180(m)
    return rotate_CCW_90(rotate_CCW_90(m))
 end
+
+function loadTableFromFile(datfilename)
+    -- inputs: datfilename eg racetrack.dat
+    -- output: table or nil
+    local thistable = {}
+    local savefile = savedir .. datfilename
+	if nativefs.getInfo(savefile) then
+		contents, size = nativefs.read(savefile)
+	    thistable = bitser.loads(contents)
+        return thistable
+    else
+        return nil
+    end
+end
+
+function saveTableToFile(datfilename, table)
+    -- inputs: datfilename eg racetrack.dat
+    -- inputs: table = the table that needs to be serialised and save
+    local savefile = savedir .. datfilename
+    local serialisedString = bitser.dumps(table)
+    local success, message = nativefs.write(savefile, serialisedString)
+    return success
+end
