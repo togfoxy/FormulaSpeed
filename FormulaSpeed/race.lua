@@ -642,7 +642,6 @@ local function addCarMoves(carindex)
     cars[carindex].movesleft = diceroll
 
     if carindex > 1 then
-        print("*************************")
         print("Dice roll for car #" .. carindex .. " is " .. diceroll)
     end
 
@@ -773,7 +772,7 @@ local function executeLegalMove(carindex, desiredcell)
                         local txt = "Car #" .. carindex .. " used " .. originalmovesleft .. " tyre points"
                         lovelyToasts.show(txt, 7, "middle")
                         cars[carindex].wptyres = cars[carindex].wptyres - originalmovesleft
-                        cars[carindex].movesleft = 0
+                        -- cars[carindex].movesleft = 0
                         fun.playAudio(enum.audioSkid, false, true)
                     elseif cars[carindex].wptyres == originalmovesleft then
                         -- spin becaue overshoot amount == wptyres
@@ -904,65 +903,63 @@ local function executeLegalMove(carindex, desiredcell)
     end
 end
 
-local function botSelectGear(botnumber)
-    -- purely random and needs to be improved
-	local result
-	local currentcell = cars[botnumber].cell
-	local preferredspeed
-	local preferredgear
-	local gearshift			-- how much to shift up/down
+local function botSelectGear2(botnumber)
+    -- returns the final and legit gear for this bot
+
+    local currentcell = cars[botnumber].cell
+    local preferredgear
+    local gearshift			-- how much to shift up/down
+    local currentgear = cars[botnumber].gear
+    local result
 
     if not cars[botnumber].isOffGrid then
         gearshift = 1       -- shift up
     else
-    	if trackknowledge[currentcell] ~= nil then
-    		preferredspeed = trackknowledge[currentcell].moves
-    	end
-    	if preferredspeed ~= nil then
-    		-- try to pick a gear that provides the preferred speed
-    		-- this will choose the slowest speed but will do for now
-    		-- each bot has a different risk appetite so will use a slightly different algorithm
-    		if botnumber == 2 then
-    			-- choose the highest gear that contains the desired speed
-    			for i = 6, 1, -1 do
-    				if cars[botnumber].gearbox[i][1] <= preferredspeed and cars[botnumber].gearbox[i][2] >= preferredspeed then
-    					preferredgear = i
-    					break
-    				end
-    			end
-    		elseif botnumber == 3 then
-    			-- choose the gear that doesn't go over preferred speed
-    			for i = 6, 1, -1 do
-    				if cars[botnumber].gearbox[i][2] <= preferredspeed then
-    					preferredgear = i
-    					break
-    				end
-    			end
-    		else
-    			-- a generic default gear selection
-    			for i = 1, 6 do		-- gears
-    				if cars[botnumber].gearbox[i][1] <= preferredspeed and cars[botnumber].gearbox[i][2] >= preferredspeed then
-    					preferredgear = i
-    					break
-    				end
-    			end
-    		end
-    		-- there is a chance the above for loops terminates with no result due to gearbox configuration
-    		if preferredgear ~= nil then
-    			gearshift = preferredgear - cars[botnumber].gear 		-- (preferred - current)
-    			if gearshift > 1 then gearshift = 1 end
-    		end
-    	end
-
-    	if gearshift == nil then	-- pick random gear
-    		gearshift = love.math.random(-1, 1)
-    	end
+        if qtable == nil or qtable[currentcell] == nil or qtable[currentcell].gear == nil then
+    		gearshift = love.math.random(-1, 1)       -- pick random gear
+        else
+            if love.math.random(1,10) == 1 then
+                -- explore
+                local count = 0
+                local rndnum
+                repeat
+                    rndnum = love.math.random(-1, 1)       -- pick random gear
+                    local maybegear = cars[botnumber].gear + rndnum
+                    local qgear = qtable[currentcell].gear[maybegear]
+                    if qgear == nil then qgear = 0 end
+                    count = count + 1
+                until qgear > 0 or count > 10
+                gearshift = rndnum
+            else
+                -- exploit. Get highest weight q value
+                local bestqvalue = 0
+                local bestgear = 0
+                for gearindex, qvalue in pairs(qtable[currentcell].gear) do
+                    if qvalue >= bestqvalue then
+                        bestqvalue = qvalue
+                        bestgear = gearindex
+                        print("Qtable suggesting gear #" .. bestgear)
+                    end
+                end
+                if bestgear > currentgear then
+                    gearshift = 1
+                elseif bestgear == currentgear then
+                    gearshift = 0
+                elseif bestgear == 0 then
+                    gearshift = love.math.random(-1, 1)       -- pick random gear
+                elseif bestgear < currentgear then
+                    gearshift = -1      --! need to allow bots to shift down more than 1
+                else
+                    error()         -- unexpected code
+                end
+            end
+        end
     end
 
-	result = cars[botnumber].gear + gearshift
-	if result < 1 then result = 1 end
-	if result > 6 then result = 6 end
-	assert(result ~= nil)
+    result = currentgear + gearshift
+    if result < 1 then result = 1 end
+    if result > 6 then result = 6 end
+    assert(result ~= nil)
     return result
 end
 
@@ -1101,7 +1098,8 @@ local function applyMoves(carindex)
 end
 
 local function moveBots()
-    cars[currentplayer].gear = botSelectGear(currentplayer)
+    print("*************************")
+    cars[currentplayer].gear = botSelectGear2(currentplayer)
     addCarMoves(currentplayer)       -- assumes the gear has been set
     applyMoves(currentplayer)
 end
@@ -1743,8 +1741,8 @@ function race.draw()
         -- draw the ghost, if there is one
         if currentplayer == 1 and cars[1].isOffGrid then
             if ghost ~= nil then        -- will be nil if no ghost.dat file exists
-                if ghost[numberofturns + 1] ~= nil then
-                    local ghostcell = ghost[numberofturns + 1]
+                if ghost[numberofturns] ~= nil then
+                    local ghostcell = ghost[numberofturns]
 
                     local drawx = racetrack[ghostcell].x
                     local drawy = racetrack[ghostcell].y
